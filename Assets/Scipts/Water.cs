@@ -10,6 +10,11 @@ public class Water : MonoBehaviour
     [SerializeField] private int lengthZ = 10;
     [SerializeField] private int quadRes = 10;
 
+    [Range(0.01f, 5.0f)]
+    [SerializeField] private float amplitude;
+    [Range(0.01f, 5.0f)]
+    [SerializeField] private float frequency;
+
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
@@ -52,6 +57,19 @@ public class Water : MonoBehaviour
         }
 
         mesh.triangles = triangles;
+    }
+
+    private void Update()
+    {
+        if (vertices == null) return;
+
+        for(int i = 0; i < vertices.Length; i++)
+        {
+            Vector3 vert = transform.TransformPoint(vertices[i]);
+            float height = amplitude * Mathf.Sin(vert.x * vert.z * frequency + Time.time);
+            vertices[i].y = height;
+        }
+        mesh.vertices = vertices;
     }
 
     private void OnDrawGizmos()
