@@ -21,7 +21,9 @@ public class Water : MonoBehaviour
     //ref: https://catlikecoding.com/unity/tutorials/procedural-grid/
     private void CreatePlane()
     {
+        mesh = new Mesh();
         GetComponent<MeshFilter>().mesh = mesh;
+        mesh.name = "procedural Plane";
 
         int sideVertCountX = lengthX * quadRes;
         int sideVertCountZ = lengthZ * quadRes;
@@ -35,14 +37,29 @@ public class Water : MonoBehaviour
                 i++;
             }
         }
+        mesh.vertices = vertices;
+
+        int[] triangles = new int[sideVertCountX * sideVertCountZ * 6];
+        for(int tris = 0, vert = 0, z = 0; z < sideVertCountZ; z++, vert++)
+        {
+            for(int x = 0; x < sideVertCountX; x++, tris += 6, vert++)
+            {
+                triangles[tris] = vert;
+                triangles[tris + 3] = triangles[tris + 2] = vert + 1;
+                triangles[tris + 4] = triangles[tris + 1] = vert + sideVertCountX + 1;
+                triangles[tris + 5] = vert + sideVertCountX + 2;
+            }
+        }
+
+        mesh.triangles = triangles;
     }
 
     private void OnDrawGizmos()
     {
-        if (vertices == null) return;
-        for(int i = 0; i < vertices.Length; i++)
-        {
-            Gizmos.DrawSphere(vertices[i], 0.1f);
-        }
+        //if (vertices == null) return;
+        //for(int i = 0; i < vertices.Length; i++)
+        //{
+        //    Gizmos.DrawSphere(vertices[i], 0.1f);
+        //}
     }
 }
