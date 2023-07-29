@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static System.Runtime.InteropServices.Marshal;
 
 [RequireComponent(typeof(MeshFilter))]
 public class Water : MonoBehaviour
@@ -24,15 +25,37 @@ public class Water : MonoBehaviour
     [SerializeField] private int lengthZ = 10;
     [SerializeField] private int quadRes = 10;
     [SerializeField] private Wave[] waves;
-
+    [SerializeField] private Shader waterShader;
 
 
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
+    private ComputeBuffer waveBuffer;
+
+    private Material waterMat;
     private void OnEnable()
     {
         CreatePlane();
+        CreateMaterial();
+        CreateBuffer();
+    }
+
+    private void CreateMaterial()
+    {
+        if (waterShader == null) return;
+        if (waterMat != null) return;
+        waterMat = new Material(waterShader);
+        waterMat.SetInt("_WavesLength", waves.Length);
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+
+        renderer.material = waterMat;
+    }
+
+    private void CreateBuffer()
+    {
+        waveBuffer = new ComputeBuffer(4, SizeOf(typeof(Wave)));
+        waterMat.SetBuffer("_Waves", waveBuffer);
     }
 
     //ref: https://catlikecoding.com/unity/tutorials/procedural-grid/
@@ -74,14 +97,15 @@ public class Water : MonoBehaviour
     private void Update()
     {
         if (vertices == null) return;
-
-        for(int i = 0; i < vertices.Length; i++)
-        {
-            Vector3 vert = transform.TransformPoint(vertices[i]);
-            float height = SumWaves(vert.x * vert.z);
-            vertices[i].y = height;
-        }
-        mesh.vertices = vertices;
+        waveBuffer.SetData(waves);
+        waterMat.SetBuffer("_Waves", waveBuffer);
+        //for(int i = 0; i < vertices.Length; i++)
+        //{
+        //    Vector3 vert = transform.TransformPoint(vertices[i]);
+        //    float height = SumWaves(vert.x * vert.z);
+        //    vertices[i].y = height;
+        //}
+        //mesh.vertices = vertices;
     }
 
     private float SumWaves(float x)

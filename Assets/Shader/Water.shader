@@ -18,6 +18,8 @@ Shader "Unlit/Water"
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
+            #include "UnityPBSLighting.cginc"
+            #include "AutoLight.cginc"
 
             struct appdata
             {
@@ -30,15 +32,36 @@ Shader "Unlit/Water"
                 float2 uv : TEXCOORD0;
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
+                float3 worldPos: TEXCOORD1;
+            };
+
+            struct Wave
+            {
+                float amplitude;
+                float frequency;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            StructuredBuffer<Wave> _Waves;
+            int _WavesLength;
+
+            float Sine(float3 vert, Wave w) {
+                float xz = vert.x * vert.z;
+                return w.amplitude * sin(w.frequency * xz + _Time.y);
+            }
 
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                float height = 0.0f;
+                for (int i = 0; i < _WavesLength; i++) {
+                    height += Sine(o.worldPos, _Waves[i]);
+                }
+                o.vertex = UnityObjectToClipPos(v.vertex + float4(0.0f, height, 0.0f, 0.0f));
+
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
