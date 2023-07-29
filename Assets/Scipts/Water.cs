@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,15 +6,26 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter))]
 public class Water : MonoBehaviour
 {
+    [Serializable]
+    public struct Wave
+    {
+        [Range(0.01f, 5.0f)]
+        [SerializeField] private float amplitude;
+        [Range(0.01f, 5.0f)]
+        [SerializeField] private float frequency;
+
+        public float CalulateSine(float x)
+        {
+            return amplitude * Mathf.Sin(x * frequency + Time.time);
+        }
+    }
 
     [SerializeField] private int lengthX = 10;
     [SerializeField] private int lengthZ = 10;
     [SerializeField] private int quadRes = 10;
+    [SerializeField] private Wave[] waves;
 
-    [Range(0.01f, 5.0f)]
-    [SerializeField] private float amplitude;
-    [Range(0.01f, 5.0f)]
-    [SerializeField] private float frequency;
+
 
     private Mesh mesh;
     private Vector3[] vertices;
@@ -66,10 +78,20 @@ public class Water : MonoBehaviour
         for(int i = 0; i < vertices.Length; i++)
         {
             Vector3 vert = transform.TransformPoint(vertices[i]);
-            float height = amplitude * Mathf.Sin(vert.x * vert.z * frequency + Time.time);
+            float height = SumWaves(vert.x * vert.z);
             vertices[i].y = height;
         }
         mesh.vertices = vertices;
+    }
+
+    private float SumWaves(float x)
+    {
+        float result = 0;
+        for(int i = 0; i < waves.Length; i++)
+        {
+            result += waves[i].CalulateSine(x);
+        }
+        return result;
     }
 
     private void OnDrawGizmos()
