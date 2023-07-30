@@ -39,6 +39,8 @@ Shader "Unlit/Water"
             {
                 float amplitude;
                 float frequency;
+                float2 direction;
+                float phase;
             };
 
             sampler2D _MainTex;
@@ -47,8 +49,44 @@ Shader "Unlit/Water"
             int _WavesLength;
 
             float Sine(float3 vert, Wave w) {
+                float time = _Time.y * w.phase;
                 float xz = vert.x * vert.z;
-                return w.amplitude * sin(w.frequency * xz + _Time.y);
+                return w.amplitude * sin(w.frequency * xz + time);
+            }
+
+            float3 Normal(float3 vert, Wave w) {
+                float2 d = w.direction;
+                float xz = d.x * vert.x + d.y * vert.z;
+                float time = _Time.y * w.phase;
+                float2 n = w.frequency * w.amplitude * d * cos(xz * w.frequency + time);
+
+                return float3(n, 0.0f);
+            }
+
+            float4 BlinnPhone(float3 p) {
+                float3 lightDir = _WorldSpaceLightPos0;
+                float3 E = normalize(_WorldSpaceCameraPos - p);
+                float3 H = normalize(lightDir + E);
+                float3 N = 0.0f;
+
+                for(int i =0; i< _WavesLength;i++){
+                    N += Normal(p, _Waves[i]);
+                }
+                N = normalize(N);
+                float Kd = DotClamped(N, lightDir);
+                float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f);
+
+                float Ks = pow(DotClamped(N, H), 100.0);
+                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f);
+
+                float4 ambient = float4( 0.0f, 0.0f, 0.1f, 0.0f);
+
+                if (dot(lightDir, N) < 0.0) {
+                    spec = float4(0, 0, 0, 1);
+                }
+
+                float4 color = saturate(ambient + diffuse + spec);
+                return color;
             }
 
             v2f vert (appdata v)
@@ -73,7 +111,7 @@ Shader "Unlit/Water"
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
-                return col;
+                return BlinnPhone(i.worldPos);
             }
             ENDCG
         }

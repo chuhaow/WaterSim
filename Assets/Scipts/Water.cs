@@ -14,6 +14,8 @@ public class Water : MonoBehaviour
         [SerializeField] private float amplitude;
         [Range(0.01f, 5.0f)]
         [SerializeField] private float frequency;
+        [SerializeField] private Vector2 direction;
+        [SerializeField] private float phase;
 
         public float CalulateSine(float x)
         {
