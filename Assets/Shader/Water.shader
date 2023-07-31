@@ -48,9 +48,12 @@ Shader "Unlit/Water"
             StructuredBuffer<Wave> _Waves;
             int _WavesLength;
 
+            float4 _Ambient, _Diffuse, _Specular;
+
             float Sine(float3 vert, Wave w) {
                 float time = _Time.y * w.phase;
-                float xz = vert.x * vert.z;
+                float2 d = w.direction;
+                float xz = d.x * vert.x + d.y * vert.z;
                 return w.amplitude * sin(w.frequency * xz + time);
             }
 
@@ -72,18 +75,16 @@ Shader "Unlit/Water"
                 for(int i =0; i< _WavesLength;i++){
                     N += Normal(p, _Waves[i]);
                 }
-                N = normalize(N);
+                N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, lightDir);
-                float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f);
+                float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
                 float Ks = pow(DotClamped(N, H), 100.0);
-                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f);
+                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f) * _Specular ;
 
-                float4 ambient = float4( 0.0f, 0.0f, 0.1f, 0.0f);
+                float4 ambient = _Ambient;
 
-                if (dot(lightDir, N) < 0.0) {
-                    spec = float4(0, 0, 0, 1);
-                }
+             
 
                 float4 color = saturate(ambient + diffuse + spec);
                 return color;

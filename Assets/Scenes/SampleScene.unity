@@ -353,6 +353,9 @@ MonoBehaviour:
     direction: {x: 1, y: 0}
     phase: 1
   waterShader: {fileID: 4800000, guid: e491c651dd06ef04c92cae631aaddb1d, type: 3}
+  Ambient: {r: 0, g: 0, b: 0, a: 0}
+  Diffuse: {r: 0.31428105, g: 0.28123888, b: 0.754717, a: 0}
+  Specular: {r: 0.52222955, g: 0.4963955, b: 0.9150943, a: 0}
 --- !u!23 &1999523235
 MeshRenderer:
   m_ObjectHideFlags: 0

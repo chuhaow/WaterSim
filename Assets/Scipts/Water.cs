@@ -29,6 +29,9 @@ public class Water : MonoBehaviour
     [SerializeField] private Wave[] waves;
     [SerializeField] private Shader waterShader;
 
+    [SerializeField] private Color Ambient;
+    [SerializeField] private Color Diffuse;
+    [SerializeField] private Color Specular;
 
     private Mesh mesh;
     private Vector3[] vertices;
@@ -101,6 +104,9 @@ public class Water : MonoBehaviour
         if (vertices == null) return;
         waveBuffer.SetData(waves);
         waterMat.SetBuffer("_Waves", waveBuffer);
+        waterMat.SetColor("_Ambient", Ambient);
+        waterMat.SetColor("_Diffuse", Diffuse);
+        waterMat.SetColor("_Specular", Specular);
         //for(int i = 0; i < vertices.Length; i++)
         //{
         //    Vector3 vert = transform.TransformPoint(vertices[i]);
