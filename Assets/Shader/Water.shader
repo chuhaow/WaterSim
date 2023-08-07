@@ -41,6 +41,7 @@ Shader "Unlit/Water"
                 float frequency;
                 float2 direction;
                 float phase;
+                float sharpness;
             };
 
             sampler2D _MainTex;
@@ -56,6 +57,36 @@ Shader "Unlit/Water"
                 float xz = d.x * vert.x + d.y * vert.z;
                 return w.amplitude * sin(w.frequency * xz + time);
             }
+            //https://catlikecoding.com/unity/tutorials/flow/waves/
+            float3 GerstnerWave(float3 vert, Wave w)
+            {
+                float time = _Time.y * w.phase;
+                float2 d = w.direction;
+                float xz = d.x * vert.x + d.y * vert.z;
+
+                float3 result = float3(0.0f, 0.0f, 0.0f);
+                result.x = d.x *  w.sharpness * w.amplitude * cos(w.frequency * xz + time);
+                result.z = d.y * w.sharpness * w.amplitude * cos(w.frequency * xz + time);
+                result.y = w.amplitude * sin(w.frequency * xz + time);
+                return result;
+            }
+
+            float3 GerstnerNormal(float3 v, Wave w) {
+				float2 d = w.direction;
+				float xz = d.x * v.x + d.y * v.z;
+
+				float3 n = float3(0.0f, 0.0f, 0.0f);
+				
+				float wa = w.frequency * w.amplitude;
+				float s = sin(w.frequency * xz + _Time.y * w.phase);
+				float c = cos(w.frequency * xz + _Time.y * w.phase);
+
+				n.x = d.x * wa * c;
+				n.z = d.y * wa * c;
+				n.y = w.sharpness * wa * s;
+
+				return n;
+			}
 
             float3 Normal(float3 vert, Wave w) {
                 float2 d = w.direction;
@@ -73,7 +104,7 @@ Shader "Unlit/Water"
                 float3 N = 0.0f;
 
                 for(int i =0; i< _WavesLength;i++){
-                    N += Normal(p, _Waves[i]);
+                    N += GerstnerNormal(p, _Waves[i]);
                 }
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, lightDir);
@@ -95,11 +126,13 @@ Shader "Unlit/Water"
                 v2f o;
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float height = 0.0f;
+                float3 height = 0.0f;
                 for (int i = 0; i < _WavesLength; i++) {
-                    height += Sine(o.worldPos, _Waves[i]);
+                    height += Gerstner(o.worldPos, _Waves[i]);
                 }
-                o.vertex = UnityObjectToClipPos(v.vertex + float4(0.0f, height, 0.0f, 0.0f));
+                float4 newPos = v.vertex + float4(height, 0.0f);
+				o.worldPos = mul(unity_ObjectToWorld, newPos);
+				o.vertex = UnityObjectToClipPos(newPos);
 
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 UNITY_TRANSFER_FOG(o,o.vertex);
