@@ -33,6 +33,7 @@ public class Water : MonoBehaviour
     [SerializeField] private Color Ambient;
     [SerializeField] private Color Diffuse;
     [SerializeField] private Color Specular;
+    [SerializeField] private float Reflectance;
 
     private Mesh mesh;
     private Vector3[] vertices;
@@ -53,6 +54,7 @@ public class Water : MonoBehaviour
         if (waterMat != null) return;
         waterMat = new Material(waterShader);
         waterMat.SetInt("_WavesLength", waves.Length);
+        
         MeshRenderer renderer = GetComponent<MeshRenderer>();
 
         renderer.material = waterMat;
@@ -108,6 +110,7 @@ public class Water : MonoBehaviour
         waterMat.SetColor("_Ambient", Ambient);
         waterMat.SetColor("_Diffuse", Diffuse);
         waterMat.SetColor("_Specular", Specular);
+        waterMat.SetFloat("F0", Reflectance);
         //for(int i = 0; i < vertices.Length; i++)
         //{
         //    Vector3 vert = transform.TransformPoint(vertices[i]);

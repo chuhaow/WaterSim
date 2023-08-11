@@ -3,6 +3,7 @@ Shader "Unlit/Water"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
+        F0 ("Reflectance At Normal Incidence", Float) = 0.01
     }
     SubShader
     {
@@ -46,6 +47,7 @@ Shader "Unlit/Water"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float F0;
             StructuredBuffer<Wave> _Waves;
             int _WavesLength;
 
@@ -110,8 +112,12 @@ Shader "Unlit/Water"
                 float Kd = DotClamped(N, lightDir);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
+                float base = 1 - dot(E, N);
+                float exponential = pow(base, 25.0);
+                float fresnel = exponential + F0 * (1.0 - exponential);
+
                 float Ks = pow(DotClamped(N, H), 100.0);
-                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f) * _Specular ;
+                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f) * _Specular * fresnel;
 
                 float4 ambient = _Ambient;
 
@@ -128,7 +134,7 @@ Shader "Unlit/Water"
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 float3 height = 0.0f;
                 for (int i = 0; i < _WavesLength; i++) {
-                    height += Gerstner(o.worldPos, _Waves[i]);
+                    height += GerstnerWave(o.worldPos, _Waves[i]);
                 }
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);
