@@ -48,6 +48,8 @@ Shader "Unlit/Water"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             float F0;
+            float _BaseGain;
+            float _BaseLacunarity;
             StructuredBuffer<Wave> _Waves;
             int _WavesLength;
 
@@ -90,6 +92,39 @@ Shader "Unlit/Water"
 				return n;
 			}
 
+            float3 GerstnerWaveFBM(float3 vert, Wave w, float lacunarity, float gain)
+            {
+                float time = _Time.y * w.phase;
+                float2 d = w.direction;
+                float xz = d.x * vert.x + d.y * vert.z;
+                float fbmFreq = w.frequency * lacunarity;
+                float fbmAmp = w.amplitude * gain;
+
+                float3 result = float3(0.0f, 0.0f, 0.0f);
+                result.x = d.x * w.sharpness * fbmAmp * cos(fbmFreq * xz + time);
+                result.z = d.y * w.sharpness * fbmAmp * cos(fbmFreq * xz + time);
+                result.y = fbmAmp * sin(fbmFreq * xz + time);
+                return result;
+            }
+
+            float3 GerstnerNormalFBM(float3 v, Wave w, float lacunarity, float gain) {
+                float2 d = w.direction;
+                float xz = d.x * v.x + d.y * v.z;
+                float fbmFreq = w.frequency * lacunarity;
+                float fbmAmp = w.amplitude * gain;
+                float3 n = float3(0.0f, 0.0f, 0.0f);
+
+                float wa = fbmFreq * fbmAmp;
+                float s = sin(fbmFreq * xz + _Time.y * w.phase);
+                float c = cos(fbmFreq * xz + _Time.y * w.phase);
+
+                n.x = d.x * wa * c;
+                n.z = d.y * wa * c;
+                n.y = w.sharpness * wa * s;
+
+                return n;
+            }
+
             float3 Normal(float3 vert, Wave w) {
                 float2 d = w.direction;
                 float xz = d.x * vert.x + d.y * vert.z;
@@ -106,7 +141,9 @@ Shader "Unlit/Water"
                 float3 N = 0.0f;
 
                 for(int i =0; i< _WavesLength;i++){
-                    N += GerstnerNormal(p, _Waves[i]);
+                    float gain = (1.0f - _BaseGain * i);
+                    float lacunarity = (1.0f +_BaseLacunarity * i);
+                    N += GerstnerNormalFBM(p, _Waves[i], lacunarity, gain);
                 }
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, lightDir);
@@ -134,7 +171,9 @@ Shader "Unlit/Water"
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 float3 height = 0.0f;
                 for (int i = 0; i < _WavesLength; i++) {
-                    height += GerstnerWave(o.worldPos, _Waves[i]);
+                    float gain = (1.0f - _BaseGain * i);
+                    float lacunarity = (1.0f + _BaseLacunarity * i);
+                    height += GerstnerWaveFBM(o.worldPos, _Waves[i], lacunarity, gain);
                 }
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);

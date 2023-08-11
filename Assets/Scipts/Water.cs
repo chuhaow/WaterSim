@@ -35,6 +35,9 @@ public class Water : MonoBehaviour
     [SerializeField] private Color Specular;
     [SerializeField] private float Reflectance;
 
+    [SerializeField] private float Lacunarity;
+    [Range(0.0f, 1.0f)]
+    [SerializeField] private float Gain;
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
@@ -62,7 +65,7 @@ public class Water : MonoBehaviour
 
     private void CreateBuffer()
     {
-        waveBuffer = new ComputeBuffer(4, SizeOf(typeof(Wave)));
+        waveBuffer = new ComputeBuffer(waves.Length, SizeOf(typeof(Wave)));
         waterMat.SetBuffer("_Waves", waveBuffer);
     }
 
@@ -111,6 +114,8 @@ public class Water : MonoBehaviour
         waterMat.SetColor("_Diffuse", Diffuse);
         waterMat.SetColor("_Specular", Specular);
         waterMat.SetFloat("F0", Reflectance);
+        waterMat.SetFloat("_BaseLacunarity", Lacunarity);
+        waterMat.SetFloat("_BaseGain", Gain);
         //for(int i = 0; i < vertices.Length; i++)
         //{
         //    Vector3 vert = transform.TransformPoint(vertices[i]);
@@ -128,6 +133,11 @@ public class Water : MonoBehaviour
             result += waves[i].CalulateSine(x);
         }
         return result;
+    }
+
+    private void OnDestroy()
+    {
+        waveBuffer.Dispose();
     }
 
     private void OnDrawGizmos()
