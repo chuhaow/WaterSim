@@ -143,7 +143,7 @@ Shader "Unlit/Water"
                 for(int i =0; i< _WavesLength;i++){
                     float gain = (1.0f - _BaseGain * i);
                     float lacunarity = (1.0f +_BaseLacunarity * i);
-                    N += GerstnerNormalFBM(p, _Waves[i], lacunarity, gain);
+                    N += GerstnerNormal(p, _Waves[i]);
                 }
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, lightDir);
@@ -173,7 +173,7 @@ Shader "Unlit/Water"
                 for (int i = 0; i < _WavesLength; i++) {
                     float gain = (1.0f - _BaseGain * i);
                     float lacunarity = (1.0f + _BaseLacunarity * i);
-                    height += GerstnerWaveFBM(o.worldPos, _Waves[i], lacunarity, gain);
+                    height += GerstnerWave(o.worldPos, _Waves[i]);
                 }
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);
