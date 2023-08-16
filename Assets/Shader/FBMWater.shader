@@ -92,6 +92,50 @@ Shader "Unlit/FBMWater"
 				return n;
 			}
 
+            float3 FBM(float3 vert) {
+                float freq = 1.0f;
+                float amp = 1.0f;
+                float speed = 1.0f;
+                float rnd = 0.0f;
+                float ampSum = 0.0f;
+                float h = 0.0f;
+                for (int i = 0; i < _WavesLength; i++) {
+                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
+                    float xz = dir.x * vert.x + dir.y * vert.z;
+                    float wave = amp * sin(freq * xz + _Time.y * speed);
+                    ampSum += amp;
+                    h += wave;
+                    freq *= 1.18f;
+                    amp *= 0.18f;
+                    speed *= 1.07f;
+                    rnd += 241.0f;
+                }
+
+                return float3(h, 0, 0)/ampSum;
+            }
+
+            float3 FBMNormal(float3 vert) {
+                float freq = 1.0f;
+                float amp = 1.0f;
+                float speed = 1.0f;
+                float rnd = 0.0f;
+                float ampSum = 0.0f;
+                float h = 0.0f;
+                for (int i = 0; i < _WavesLength; i++) {
+                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
+                    float xz = dir.x * vert.x + dir.y * vert.z;
+                    float wave = amp * sin(freq * xz + _Time.y * speed);
+                    ampSum += amp;
+                    h += wave;
+                    freq *= 1.18f;
+                    amp *= 0.18f;
+                    speed *= 1.07f;
+                    rnd += 241.0f;
+                }
+
+                return float3(h, 0, 0) / ampSum;
+            }
+
             float3 Normal(float3 vert, Wave w) {
                 float2 d = w.direction;
                 float xz = d.x * vert.x + d.y * vert.z;
@@ -114,7 +158,7 @@ Shader "Unlit/FBMWater"
                     N += GerstnerNormal(p, _Waves[i]);
                 }
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
-                float Kd = DotClamped(N, lightDir);
+                float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
                 float base = 1 - dot(E, N);
@@ -141,8 +185,9 @@ Shader "Unlit/FBMWater"
                 for (int i = 0; i < _WavesLength; i++) {
                     float gain = (1.0f - _BaseGain * i);
                     float lacunarity = (1.0f + _BaseLacunarity * i);
-                    height += GerstnerWave(o.worldPos, _Waves[i]);
+                    
                 }
+                height += FBM(o.worldPos).x;
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);
 				o.vertex = UnityObjectToClipPos(newPos);

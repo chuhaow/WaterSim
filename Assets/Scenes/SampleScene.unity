@@ -351,7 +351,32 @@ MonoBehaviour:
     direction: {x: 1, y: 1.25}
     phase: 0
     sharpness: 0.5
-  waterShader: {fileID: 4800000, guid: e491c651dd06ef04c92cae631aaddb1d, type: 3}
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
+  waterShader: {fileID: 4800000, guid: 1a221a921f5aee8458d89d567f03af12, type: 3}
   Ambient: {r: 0.18770026, g: 0.3337286, b: 0.3584906, a: 0}
   Diffuse: {r: 0.10980392, g: 0.6392157, b: 0.9254902, a: 0}
   Specular: {r: 1, g: 1, b: 1, a: 0}
