@@ -92,39 +92,6 @@ Shader "Unlit/Water"
 				return n;
 			}
 
-            float3 GerstnerWaveFBM(float3 vert, Wave w, float lacunarity, float gain)
-            {
-                float time = _Time.y * w.phase;
-                float2 d = w.direction;
-                float xz = d.x * vert.x + d.y * vert.z;
-                float fbmFreq = w.frequency * lacunarity;
-                float fbmAmp = w.amplitude * gain;
-
-                float3 result = float3(0.0f, 0.0f, 0.0f);
-                result.x = d.x * w.sharpness * fbmAmp * cos(fbmFreq * xz + time);
-                result.z = d.y * w.sharpness * fbmAmp * cos(fbmFreq * xz + time);
-                result.y = fbmAmp * sin(fbmFreq * xz + time);
-                return result;
-            }
-
-            float3 GerstnerNormalFBM(float3 v, Wave w, float lacunarity, float gain) {
-                float2 d = w.direction;
-                float xz = d.x * v.x + d.y * v.z;
-                float fbmFreq = w.frequency * lacunarity;
-                float fbmAmp = w.amplitude * gain;
-                float3 n = float3(0.0f, 0.0f, 0.0f);
-
-                float wa = fbmFreq * fbmAmp;
-                float s = sin(fbmFreq * xz + _Time.y * w.phase);
-                float c = cos(fbmFreq * xz + _Time.y * w.phase);
-
-                n.x = d.x * wa * c;
-                n.z = d.y * wa * c;
-                n.y = w.sharpness * wa * s;
-
-                return n;
-            }
-
             float3 Normal(float3 vert, Wave w) {
                 float2 d = w.direction;
                 float xz = d.x * vert.x + d.y * vert.z;
@@ -134,6 +101,7 @@ Shader "Unlit/Water"
                 return float3(n, 0.0f);
             }
 
+            //Fresnel from https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-14-advanced-techniques-realistic-real-time-skin
             float4 BlinnPhone(float3 p) {
                 float3 lightDir = _WorldSpaceLightPos0;
                 float3 E = normalize(_WorldSpaceCameraPos - p);

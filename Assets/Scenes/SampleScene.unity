@@ -336,56 +336,26 @@ MonoBehaviour:
   lengthZ: 10
   quadRes: 10
   waves:
-  - amplitude: 0.86
-    frequency: 0.43
-    direction: {x: 1.19, y: 1.49}
-    phase: 4.25
-    sharpness: 0.33
-  - amplitude: 0.26
+  - amplitude: 0.44
+    frequency: 0.35
+    direction: {x: 1, y: 1}
+    phase: 2
+    sharpness: 0.5
+  - amplitude: 0.34
     frequency: 0.18
-    direction: {x: 0.84, y: 0}
-    phase: 0.66
-    sharpness: 0.33
-  - amplitude: 0.79
-    frequency: 0.49
-    direction: {x: 1, y: 1.24}
-    phase: 1.96
-    sharpness: 0
-  - amplitude: 1.04
-    frequency: 0.39
-    direction: {x: 1, y: 0}
-    phase: -2.3
-    sharpness: 0
-  - amplitude: 0.51
-    frequency: 0.12
-    direction: {x: 1, y: 0}
-    phase: -2.3
-    sharpness: 0
-  - amplitude: 0.09
-    frequency: 0.42
-    direction: {x: 1, y: 0}
-    phase: -1.93
-    sharpness: 0
-  - amplitude: 0.28
-    frequency: 0.12
-    direction: {x: 1, y: 0}
-    phase: 0.2
-    sharpness: 0
-  - amplitude: 0.01
-    frequency: 0.59
-    direction: {x: 1, y: 0}
-    phase: -2.3
-    sharpness: 0
-  - amplitude: 0.38
-    frequency: 0.78
-    direction: {x: 1, y: 0}
-    phase: -2.07
-    sharpness: 0.55
+    direction: {x: 1, y: 1.5}
+    phase: 1
+    sharpness: 0.5
+  - amplitude: 0.41
+    frequency: 0.37
+    direction: {x: 1, y: 1.25}
+    phase: 0
+    sharpness: 0.5
   waterShader: {fileID: 4800000, guid: e491c651dd06ef04c92cae631aaddb1d, type: 3}
   Ambient: {r: 0.18770026, g: 0.3337286, b: 0.3584906, a: 0}
   Diffuse: {r: 0.10980392, g: 0.6392157, b: 0.9254902, a: 0}
   Specular: {r: 1, g: 1, b: 1, a: 0}
-  Reflectance: 0
+  Reflectance: 1.01
   Lacunarity: 0
   Gain: 0
 --- !u!23 &1999523235
