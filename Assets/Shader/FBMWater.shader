@@ -53,6 +53,9 @@ Shader "Unlit/FBMWater"
             StructuredBuffer<Wave> _Waves;
             int _WavesLength;
 
+            float _WaveAmp, _WaveFreq, _WaveSpeed, _WaveSeed, _WaveSharpness, _WaveAmpMult, _WaveFreqMult, _WaveSharpnessMult, _WaveSpeedMult, _WaveSeedIncrement, _WaveCount;
+            float _NormAmp, _NormFreq, _NormSpeed, _NormSeed, _NormSharpness, _NormAmpMult, _NormFreqMult, _NormSharpnessMult, _NormSpeedMult, _NormSeedIncrement, _NormFBMCount;
+
             float4 _Ambient, _Diffuse, _Specular;
 
             float Sine(float3 vert, Wave w) {
@@ -93,14 +96,14 @@ Shader "Unlit/FBMWater"
 			}
 
             float3 FBM(float3 vert) {
-                float freq = 1.0f;
-                float amp = 1.0f;
-                float speed = 1.0f;
-                float rnd = 0.0f;
+                float freq = _WaveFreq;
+                float amp = _WaveAmp;
+                float speed = _WaveSpeed;
+                float rnd = _WaveSeed;
                 float ampSum = 0.0f;
-                float sharpness = 2.0f;
+                float sharpness = _WaveSharpness;
                 float3 h = 0.0f;
-                for (int i = 0; i < _WavesLength; i++) {
+                for (int i = 0; i < _WaveCount; i++) {
                     float2 dir = normalize(float2(cos(rnd), sin(rnd)));
                     float xz = dir.x * vert.x + dir.y * vert.z;
                     float3 wave = float3(0.0f, 0.0f, 0.0f);
@@ -110,25 +113,25 @@ Shader "Unlit/FBMWater"
                     //float wave = amp * sin(freq * xz + _Time.y * speed);
                     ampSum += amp;
                     h += wave;
-                    freq *= 1.18f;
-                    amp *= 0.18f;
-                    sharpness *= 0.18f;
-                    speed *= 1.07f;
-                    rnd += 241.0f;
+                    freq *= _WaveFreqMult;
+                    amp *= _WaveAmpMult;
+                    sharpness *= _WaveSharpnessMult;
+                    speed *= _WaveSpeedMult;
+                    rnd += _WaveSeedIncrement;
                 }
 
                 return h/ampSum;
             }
 
             float3 FBMNormal(float3 vert) {
-                float freq = 1.0f;
-                float amp = 1.0f;
-                float speed = 1.0f;
-                float rnd = 0.0f;
+                float freq = _NormFreq;
+                float amp = _NormAmp;
+                float speed = _NormSpeed;
+                float rnd = _NormSeed;
                 float ampSum = 0.0f;
-                float sharpness = 1.0f;
+                float sharpness = _NormSharpness;
                 float3 n = 0.0f;
-                for (int i = 0; i < _WavesLength; i++) {
+                for (int i = 0; i < _NormFBMCount; i++) {
                     float2 dir = normalize(float2(cos(rnd), sin(rnd)));
                     float xz = dir.x * vert.x + dir.y * vert.z;
                     float3 norm = float3(0.0f, 0.0f, 0.0f);
@@ -143,11 +146,11 @@ Shader "Unlit/FBMWater"
 
                     ampSum += amp;
                     n += norm;
-                    freq *= 1.18f;
-                    amp *= 0.18f;
-                    sharpness *= 0.18f;
-                    speed *= 1.07f;
-                    rnd += 241.0f;
+                    freq *= _NormFreqMult;
+                    amp *= _NormAmpMult;
+                    sharpness *= _NormSharpnessMult;
+                    speed *= _NormSpeedMult;
+                    rnd += _NormSeedIncrement;
                 }
 
                 return n / ampSum;
