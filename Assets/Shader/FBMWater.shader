@@ -65,35 +65,6 @@ Shader "Unlit/FBMWater"
                 return w.amplitude * sin(w.frequency * xz + time);
             }
             //https://catlikecoding.com/unity/tutorials/flow/waves/
-            float3 GerstnerWave(float3 vert, Wave w)
-            {
-                float time = _Time.y * w.phase;
-                float2 d = w.direction;
-                float xz = d.x * vert.x + d.y * vert.z;
-
-                float3 result = float3(0.0f, 0.0f, 0.0f);
-                result.x = d.x *  w.sharpness * w.amplitude * cos(w.frequency * xz + time);
-                result.z = d.y * w.sharpness * w.amplitude * cos(w.frequency * xz + time);
-                result.y = w.amplitude * sin(w.frequency * xz + time);
-                return result;
-            }
-
-            float3 GerstnerNormal(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
-
-				float3 n = float3(0.0f, 0.0f, 0.0f);
-				
-				float wa = w.frequency * w.amplitude;
-				float s = sin(w.frequency * xz + _Time.y * w.phase);
-				float c = cos(w.frequency * xz + _Time.y * w.phase);
-
-				n.x = d.x * wa * c;
-				n.z = d.y * wa * c;
-				n.y = w.sharpness * wa * s;
-
-				return n;
-			}
 
             float3 FBM(float3 vert) {
                 float freq = _WaveFreq;
@@ -172,11 +143,6 @@ Shader "Unlit/FBMWater"
                 float3 H = normalize(lightDir + E);
                 float3 N = 0.0f;
 
-                for(int i =0; i< _WavesLength;i++){
-                    float gain = (1.0f - _BaseGain * i);
-                    float lacunarity = (1.0f +_BaseLacunarity * i);
-                    N += GerstnerNormal(p, _Waves[i]);
-                }
                 N = FBMNormal(p);
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, H);
@@ -203,11 +169,6 @@ Shader "Unlit/FBMWater"
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 float3 height = 0.0f;
-                for (int i = 0; i < _WavesLength; i++) {
-                    float gain = (1.0f - _BaseGain * i);
-                    float lacunarity = (1.0f + _BaseLacunarity * i);
-                    
-                }
                 height += FBM(o.worldPos).x;
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);
