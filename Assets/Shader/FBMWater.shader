@@ -98,20 +98,26 @@ Shader "Unlit/FBMWater"
                 float speed = 1.0f;
                 float rnd = 0.0f;
                 float ampSum = 0.0f;
-                float h = 0.0f;
+                float sharpness = 2.0f;
+                float3 h = 0.0f;
                 for (int i = 0; i < _WavesLength; i++) {
                     float2 dir = normalize(float2(cos(rnd), sin(rnd)));
                     float xz = dir.x * vert.x + dir.y * vert.z;
-                    float wave = amp * sin(freq * xz + _Time.y * speed);
+                    float3 wave = float3(0.0f, 0.0f, 0.0f);
+                    wave.x = dir.x * sharpness * amp * cos(freq * xz + _Time.y * speed);
+                    wave.z = dir.y * sharpness * amp * cos(freq * xz + _Time.y * speed);
+                    wave.y = amp * sin(freq * xz + _Time.y * speed);
+                    //float wave = amp * sin(freq * xz + _Time.y * speed);
                     ampSum += amp;
                     h += wave;
                     freq *= 1.18f;
                     amp *= 0.18f;
+                    sharpness *= 0.18f;
                     speed *= 1.07f;
                     rnd += 241.0f;
                 }
 
-                return float3(h, 0, 0)/ampSum;
+                return h/ampSum;
             }
 
             float3 FBMNormal(float3 vert) {
@@ -120,20 +126,31 @@ Shader "Unlit/FBMWater"
                 float speed = 1.0f;
                 float rnd = 0.0f;
                 float ampSum = 0.0f;
-                float h = 0.0f;
+                float sharpness = 1.0f;
+                float3 n = 0.0f;
                 for (int i = 0; i < _WavesLength; i++) {
                     float2 dir = normalize(float2(cos(rnd), sin(rnd)));
                     float xz = dir.x * vert.x + dir.y * vert.z;
-                    float wave = amp * sin(freq * xz + _Time.y * speed);
+                    float3 norm = float3(0.0f, 0.0f, 0.0f);
+
+                    float wa = freq * amp;
+                    float s = sin(freq * xz + _Time.y * speed);
+                    float c = cos(freq * xz + _Time.y * speed);
+
+                    norm.x = dir.x * wa * c;
+                    norm.z = dir.y * wa * c;
+                    norm.y = sharpness * wa * s;
+
                     ampSum += amp;
-                    h += wave;
+                    n += norm;
                     freq *= 1.18f;
                     amp *= 0.18f;
+                    sharpness *= 0.18f;
                     speed *= 1.07f;
                     rnd += 241.0f;
                 }
 
-                return float3(h, 0, 0) / ampSum;
+                return n / ampSum;
             }
 
             float3 Normal(float3 vert, Wave w) {
@@ -157,6 +174,7 @@ Shader "Unlit/FBMWater"
                     float lacunarity = (1.0f +_BaseLacunarity * i);
                     N += GerstnerNormal(p, _Waves[i]);
                 }
+                N = FBMNormal(p);
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
                 float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
