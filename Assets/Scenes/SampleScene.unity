@@ -313,6 +313,7 @@ GameObject:
   - component: {fileID: 1999523236}
   - component: {fileID: 1999523235}
   - component: {fileID: 1999523234}
+  - component: {fileID: 1999523238}
   m_Layer: 0
   m_Name: water
   m_TagString: Untagged
@@ -327,7 +328,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1999523233}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62798b4c807c03f4ea8df06a1de774c7, type: 3}
   m_Name: 
@@ -447,3 +448,56 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1999523238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1999523233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c633c71a185df1438b5095a6372b3b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lengthX: 7
+  lengthZ: 7
+  quadRes: 10
+  waves:
+  - amplitude: 0
+    frequency: 0
+    direction: {x: 0, y: 0}
+    phase: 0
+    sharpness: 0
+  waterShader: {fileID: 4800000, guid: b9b4cda229e0c7c4fbdb8ed475192706, type: 3}
+  cs: {fileID: 7200000, guid: ab9944631b6db1044a5cdcb44e4a4534, type: 3}
+  Ambient: {r: 0, g: 0, b: 0, a: 0}
+  Diffuse: {r: 0, g: 0, b: 0, a: 0}
+  Specular: {r: 0, g: 0, b: 0, a: 0}
+  Reflectance: 0
+  Lacunarity: 0
+  Gain: 0
+  WaveFBM:
+    amplitude: 0
+    frequency: 0
+    speed: 0
+    seed: 0
+    sharpness: 0
+    ampMult: 0
+    frequencyMult: 0
+    speedMult: 0
+    seedIncrement: 0
+    sharpnessMult: 0
+    _FBMCount: 0
+  NormFBM:
+    amplitude: 0
+    frequency: 0
+    speed: 0
+    seed: 0
+    sharpness: 0
+    ampMult: 0
+    frequencyMult: 0
+    speedMult: 0
+    seedIncrement: 0
+    sharpnessMult: 0
+    _FBMCount: 0

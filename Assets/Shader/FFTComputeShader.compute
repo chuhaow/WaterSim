@@ -1,0 +1,19 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> _HeightTex, _NormalTex;
+float _FrameTime;
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float2 dir = float2(-1, 1);
+    dir = normalize(dir);
+    
+    _HeightTex[id.xy] = sin(dot(dir, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+
+    float2 dw = dir * cos(dot(dir, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+    _NormalTex[id.xy] = float4(dir, 0, 0);
+}
