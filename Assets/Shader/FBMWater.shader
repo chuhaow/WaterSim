@@ -53,6 +53,9 @@ Shader "Unlit/FBMWater"
             StructuredBuffer<Wave> _Waves;
             int _WavesLength;
 
+            float _WaveAmp, _WaveFreq, _WaveSpeed, _WaveSeed, _WaveSharpness, _WaveAmpMult, _WaveFreqMult, _WaveSharpnessMult, _WaveSpeedMult, _WaveSeedIncrement, _WaveCount;
+            float _NormAmp, _NormFreq, _NormSpeed, _NormSeed, _NormSharpness, _NormAmpMult, _NormFreqMult, _NormSharpnessMult, _NormSpeedMult, _NormSeedIncrement, _NormFBMCount;
+
             float4 _Ambient, _Diffuse, _Specular;
 
             float Sine(float3 vert, Wave w) {
@@ -62,35 +65,67 @@ Shader "Unlit/FBMWater"
                 return w.amplitude * sin(w.frequency * xz + time);
             }
             //https://catlikecoding.com/unity/tutorials/flow/waves/
-            float3 GerstnerWave(float3 vert, Wave w)
-            {
-                float time = _Time.y * w.phase;
-                float2 d = w.direction;
-                float xz = d.x * vert.x + d.y * vert.z;
 
-                float3 result = float3(0.0f, 0.0f, 0.0f);
-                result.x = d.x *  w.sharpness * w.amplitude * cos(w.frequency * xz + time);
-                result.z = d.y * w.sharpness * w.amplitude * cos(w.frequency * xz + time);
-                result.y = w.amplitude * sin(w.frequency * xz + time);
-                return result;
+            float3 FBM(float3 vert) {
+                float freq = _WaveFreq;
+                float amp = _WaveAmp;
+                float speed = _WaveSpeed;
+                float rnd = _WaveSeed;
+                float ampSum = 0.0f;
+                float sharpness = _WaveSharpness;
+                float3 h = 0.0f;
+                for (int i = 0; i < _WaveCount; i++) {
+                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
+                    float xz = dir.x * vert.x + dir.y * vert.z;
+                    float3 wave = float3(0.0f, 0.0f, 0.0f);
+                    wave.x = dir.x * sharpness * amp * cos(freq * xz + _Time.y * speed);
+                    wave.z = dir.y * sharpness * amp * cos(freq * xz + _Time.y * speed);
+                    wave.y = amp * sin(freq * xz + _Time.y * speed);
+                    //float wave = amp * sin(freq * xz + _Time.y * speed);
+                    ampSum += amp;
+                    h += wave;
+                    freq *= _WaveFreqMult;
+                    amp *= _WaveAmpMult;
+                    sharpness *= _WaveSharpnessMult;
+                    speed *= _WaveSpeedMult;
+                    rnd += _WaveSeedIncrement;
+                }
+
+                return h/ampSum;
             }
 
-            float3 GerstnerNormal(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+            float3 FBMNormal(float3 vert) {
+                float freq = _NormFreq;
+                float amp = _NormAmp;
+                float speed = _NormSpeed;
+                float rnd = _NormSeed;
+                float ampSum = 0.0f;
+                float sharpness = _NormSharpness;
+                float3 n = 0.0f;
+                for (int i = 0; i < _NormFBMCount; i++) {
+                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
+                    float xz = dir.x * vert.x + dir.y * vert.z;
+                    float3 norm = float3(0.0f, 0.0f, 0.0f);
 
-				float3 n = float3(0.0f, 0.0f, 0.0f);
-				
-				float wa = w.frequency * w.amplitude;
-				float s = sin(w.frequency * xz + _Time.y * w.phase);
-				float c = cos(w.frequency * xz + _Time.y * w.phase);
+                    float wa = freq * amp;
+                    float s = sin(freq * xz + _Time.y * speed);
+                    float c = cos(freq * xz + _Time.y * speed);
 
-				n.x = d.x * wa * c;
-				n.z = d.y * wa * c;
-				n.y = w.sharpness * wa * s;
+                    norm.x = dir.x * wa * c;
+                    norm.z = dir.y * wa * c;
+                    norm.y = sharpness * wa * s;
 
-				return n;
-			}
+                    ampSum += amp;
+                    n += norm;
+                    freq *= _NormFreqMult;
+                    amp *= _NormAmpMult;
+                    sharpness *= _NormSharpnessMult;
+                    speed *= _NormSpeedMult;
+                    rnd += _NormSeedIncrement;
+                }
+
+                return n / ampSum;
+            }
 
             float3 Normal(float3 vert, Wave w) {
                 float2 d = w.direction;
@@ -108,13 +143,9 @@ Shader "Unlit/FBMWater"
                 float3 H = normalize(lightDir + E);
                 float3 N = 0.0f;
 
-                for(int i =0; i< _WavesLength;i++){
-                    float gain = (1.0f - _BaseGain * i);
-                    float lacunarity = (1.0f +_BaseLacunarity * i);
-                    N += GerstnerNormal(p, _Waves[i]);
-                }
+                N = FBMNormal(p);
                 N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
-                float Kd = DotClamped(N, lightDir);
+                float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
                 float base = 1 - dot(E, N);
@@ -138,11 +169,7 @@ Shader "Unlit/FBMWater"
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 float3 height = 0.0f;
-                for (int i = 0; i < _WavesLength; i++) {
-                    float gain = (1.0f - _BaseGain * i);
-                    float lacunarity = (1.0f + _BaseLacunarity * i);
-                    height += GerstnerWave(o.worldPos, _Waves[i]);
-                }
+                height += FBM(o.worldPos).x;
                 float4 newPos = v.vertex + float4(height, 0.0f);
 				o.worldPos = mul(unity_ObjectToWorld, newPos);
 				o.vertex = UnityObjectToClipPos(newPos);

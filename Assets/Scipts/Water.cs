@@ -24,6 +24,34 @@ public class Water : MonoBehaviour
         }
     }
 
+    [Serializable]
+    public struct FBMParam
+    {
+        [SerializeField] private float amplitude;
+        [SerializeField] private float frequency;
+        [SerializeField] private float speed;
+        [SerializeField] private float seed;
+        [SerializeField] private float sharpness;
+        [SerializeField] private float ampMult;
+        [SerializeField] private float frequencyMult;
+        [SerializeField] private float speedMult;
+        [SerializeField] private float seedIncrement;
+        [SerializeField] private float sharpnessMult;
+        [SerializeField] private int _FBMCount;
+
+        public float Amplitude { get => amplitude; set => amplitude = value; }
+        public float Frequency { get => frequency; set => frequency = value; }
+        public float Speed { get => speed; set => speed = value; }
+        public float Seed { get => seed; set => seed = value; }
+        public float Sharpness { get => sharpness; set => sharpness = value; }
+        public float AmpMult { get => ampMult; set => ampMult = value; }
+        public float FrequencyMult { get => frequencyMult; set => frequencyMult = value; }
+        public float SpeedMult { get => speedMult; set => speedMult = value; }
+        public float SeedIncrement { get => seedIncrement; set => seedIncrement = value; }
+        public float SharpnessMult { get => sharpnessMult; set => sharpnessMult = value; }
+        public int FBMCount { get => _FBMCount; set => _FBMCount = value; }
+    }
+
     [SerializeField] private int lengthX = 10;
     [SerializeField] private int lengthZ = 10;
     [SerializeField] private int quadRes = 10;
@@ -44,6 +72,12 @@ public class Water : MonoBehaviour
     private ComputeBuffer waveBuffer;
 
     private Material waterMat;
+
+    [Header("FBM Param")]
+    [SerializeField] private FBMParam WaveFBM;
+    [SerializeField] private FBMParam NormFBM;
+
+   
     private void OnEnable()
     {
         CreatePlane();
@@ -108,7 +142,7 @@ public class Water : MonoBehaviour
     private void Update()
     {
         if (vertices == null) return;
-        waveBuffer.SetData(waves);
+        //waveBuffer.SetData(waves);
         waterMat.SetBuffer("_Waves", waveBuffer);
         waterMat.SetColor("_Ambient", Ambient);
         waterMat.SetColor("_Diffuse", Diffuse);
@@ -116,6 +150,30 @@ public class Water : MonoBehaviour
         waterMat.SetFloat("F0", Reflectance);
         waterMat.SetFloat("_BaseLacunarity", Lacunarity);
         waterMat.SetFloat("_BaseGain", Gain);
+
+        waterMat.SetFloat("_WaveAmp", WaveFBM.Amplitude);
+        waterMat.SetFloat("_WaveFreq", WaveFBM.Frequency);
+        waterMat.SetFloat("_WaveSpeed", WaveFBM.Speed);
+        waterMat.SetFloat("_WaveSeed", WaveFBM.Seed);
+        waterMat.SetFloat("_WaveSharpness", WaveFBM.Sharpness);
+        waterMat.SetFloat("_WaveAmpMult", WaveFBM.AmpMult);
+        waterMat.SetFloat("_WaveFreqMult", WaveFBM.FrequencyMult);
+        waterMat.SetFloat("_WaveSharpnessMult", WaveFBM.SharpnessMult);
+        waterMat.SetFloat("_WaveSpeedMult", WaveFBM.SpeedMult);
+        waterMat.SetFloat("_WaveSeedIncrement", WaveFBM.SeedIncrement);
+        waterMat.SetFloat("_WaveCount", WaveFBM.FBMCount);
+
+        waterMat.SetFloat("_NormAmp", NormFBM.Amplitude);
+        waterMat.SetFloat("_NormFreq", NormFBM.Frequency);
+        waterMat.SetFloat("_NormSpeed", NormFBM.Speed);
+        waterMat.SetFloat("_NormSeed", NormFBM.Seed);
+        waterMat.SetFloat("_NormSharpness", NormFBM.Sharpness);
+        waterMat.SetFloat("_NormAmpMult", NormFBM.AmpMult);
+        waterMat.SetFloat("_NormFreqMult", NormFBM.FrequencyMult);
+        waterMat.SetFloat("_NormSharpnessMult", NormFBM.SharpnessMult);
+        waterMat.SetFloat("_NormSpeedMult", NormFBM.SpeedMult);
+        waterMat.SetFloat("_NormSeedIncrement", NormFBM.SeedIncrement);
+        waterMat.SetFloat("_NormFBMCount", NormFBM.FBMCount);
         //for(int i = 0; i < vertices.Length; i++)
         //{
         //    Vector3 vert = transform.TransformPoint(vertices[i]);
