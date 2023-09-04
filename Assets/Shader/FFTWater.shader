@@ -188,7 +188,7 @@ SubShader
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 //return float4(i.uv,0.0f,1.0f);
-                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * 1.0f);
+                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * 0.85f);
                 return float4(i.worldPos,1.0f);
             }
             ENDCG
