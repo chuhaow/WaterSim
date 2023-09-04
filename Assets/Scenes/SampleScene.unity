@@ -460,15 +460,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c633c71a185df1438b5095a6372b3b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lengthX: 7
-  lengthZ: 7
+  lengthX: 10
+  lengthZ: 10
   quadRes: 10
-  waves:
-  - amplitude: 0
-    frequency: 0
-    direction: {x: 0, y: 0}
-    phase: 0
-    sharpness: 0
+  waves: []
   waterShader: {fileID: 4800000, guid: b9b4cda229e0c7c4fbdb8ed475192706, type: 3}
   cs: {fileID: 7200000, guid: ab9944631b6db1044a5cdcb44e4a4534, type: 3}
   Ambient: {r: 0, g: 0, b: 0, a: 0}

@@ -60,7 +60,8 @@ SubShader
             float4 _Ambient, _Diffuse, _Specular;
             
             SamplerState linear_repeat_sampler;
-            Texture2D _HeightTex;
+            SamplerState point_repeat_sampler;
+            Texture2D _HeightTex, _SpectrumTex;
             sampler2D _NormalTex;
 
             float Sine(float3 vert, Wave w) {
@@ -172,10 +173,11 @@ SubShader
             {
                 v2f o;
 
-                //o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                //o.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 0.99f, 0).r, 0.0f));
-                //o.uv = v.uv;
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                o.normal = normalize(UnityObjectToWorldNormal(v.normal));
+                //o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 0.99f, 0).r, 0.0f));
+                o.vertex  = UnityObjectToClipPos(v.vertex);
+                o.uv = v.uv;
                 return o;
             }
 
@@ -185,6 +187,8 @@ SubShader
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
+                //return float4(i.uv,0.0f,1.0f);
+                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * 1.0f);
                 return float4(i.worldPos,1.0f);
             }
             ENDCG

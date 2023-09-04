@@ -76,7 +76,7 @@ public class FFTWater : MonoBehaviour
 
     private Material waterMat;
 
-    private RenderTexture heightTex, normTex;
+    private RenderTexture heightTex, normTex, spectrumTex, progSpectrumTex;
 
     [Header("FBM Param")]
     [SerializeField] private FBMParam WaveFBM;
@@ -102,8 +102,18 @@ public class FFTWater : MonoBehaviour
         normTex.enableRandomWrite = true;
         normTex.Create();
 
+        spectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        spectrumTex.enableRandomWrite = true;
+        spectrumTex.Create();
+
+        progSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
+        progSpectrumTex.enableRandomWrite = true;
+        progSpectrumTex.Create();
+
+
         cs.SetTexture(0, "_HeightTex", heightTex);
         cs.SetTexture(0, "_NormalTex", normTex);
+        cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
         cs.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
 
     }
@@ -165,15 +175,22 @@ public class FFTWater : MonoBehaviour
         mesh.triangles = triangles;
     }
 
+
     private void Update()
     {
 
         cs.SetTexture(0, "_HeightTex", heightTex);
         cs.SetTexture(0, "_NormalTex", normTex);
+        cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
         cs.SetFloat("_FrameTime", Time.time);
-        cs.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+
+        cs.SetTexture(1, "_InitSpectrumTex", spectrumTex);
+        cs.SetTexture(1, "_ProgSpectrumTex", progSpectrumTex);
+
+        cs.Dispatch(1, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
         waterMat.SetTexture("_HeightTex", heightTex);
         waterMat.SetTexture("_NormalTex", normTex);
+        waterMat.SetTexture("_SpectrumTex", progSpectrumTex);
 
         //for(int i = 0; i < vertices.Length; i++)
         //{
@@ -184,19 +201,10 @@ public class FFTWater : MonoBehaviour
         //mesh.vertices = vertices;
     }
 
-    private float SumWaves(float x)
-    {
-        float result = 0;
-        for (int i = 0; i < waves.Length; i++)
-        {
-            result += waves[i].CalulateSine(x);
-        }
-        return result;
-    }
 
     private void OnDestroy()
     {
-        waveBuffer.Dispose();
+        //waveBuffer.Dispose();
     }
 
     private void OnDrawGizmos()

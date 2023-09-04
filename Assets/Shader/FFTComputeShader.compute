@@ -1,9 +1,59 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
-
+#pragma kernel CS_UpdateSpectrum
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<float4> _HeightTex, _NormalTex;
+#define PI 3.14159265358979323846
+
+float2 ComplexMult(float2 a, float2 b) {
+    return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+float2 EulerFormula(float x) {
+    return float2(cos(x), sin(x));
+}
+
+//Robert Jenkins' 32 bit integer hash function
+float JenkenHash(uint n){
+
+   n = (n << 13U) ^ n;
+    n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+    return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+}
+
+
+float2 BoxMullerTransform(float u1, float u2) {
+    float sqr = sqrt(-2.0f * log(u1));
+    return float2(sqr * cos(2 * PI * u2), sqr * sin(2 * PI * u2) );
+}
+
+//https://github.com/Scrawk/Phillips-Ocean/blob/master/Assets/PhillipsOcean/Scripts/Ocean.cs
+float PhillipsSpectrum(float2 k){
+    float kLen = length(k);
+    if(kLen < 0.0001f) return 0.0f;
+
+
+    float k_len2 = kLen * kLen;
+    float k_len4 = k_len2 * k_len2;
+
+    float2 wind = normalize(float2(1.0f,1.0f));
+    float windLen = 2.0f;
+    float kdotWind = dot(normalize(k),wind);
+    float Amp = 1.0f;
+    float L = (windLen * windLen) / 9.8f;
+    
+
+    return Amp * (exp(-1.0f/( k_len2 * (L * L))  ) ) / k_len4 *( kdotWind* kdotWind) ;
+
+}
+
+float2 SamplePhillipsSpec(float2 k, float2 rand )
+{
+    return 1.0f/sqrt(2.0f) * (rand) * sqrt(PhillipsSpectrum(k));
+}
+
+RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex;
+RWTexture2D<float2> _ProgSpectrumTex;
 float _FrameTime;
 
 [numthreads(8,8,1)]
@@ -11,9 +61,51 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 {
     float2 dir = float2(-1, 1);
     dir = normalize(dir);
+
+    uint seed = id.x + 512 + id.y + 512;
+
+    float LengthScale = 512.0f;
+
+    float N = 512;
+    float halfN = N / 2.0f;
+
+    float n = id.x - N / 2.0f;
+    float m = id.y - N / 2.0f;
+
+    float2 K = float2(n, m) * 2.0f * PI / LengthScale;
+
+    float2 gauss1 = BoxMullerTransform( JenkenHash(seed), JenkenHash(seed * seed));
+    float2 gauss2 = BoxMullerTransform( JenkenHash(seed * seed * 0.25), JenkenHash(seed * seed * 2));
+
+    float w_0 = 2.0f * PI / 200.0f;
+    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0;
+
+    float2 h0 = SamplePhillipsSpec(K, float2(gauss1.x, gauss2.y));
+    float2 h0conj = SamplePhillipsSpec(-K, float2(gauss1.y, gauss2.x));
     
-    _HeightTex[id.xy] = sin(dot(dir, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+    _InitSpectrumTex[id.xy] = float4(h0, h0conj);
 
     float2 dw = dir * cos(dot(dir, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
     _NormalTex[id.xy] = float4(dir, 0, 0);
+}
+
+[numthreads(8,8,1)]
+void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
+    float4 initialSignal = _InitSpectrumTex[id.xy];
+    float2 h0 = initialSignal.xy;
+    float2 h0conj = initialSignal.zw;
+
+    float LengthScale = 512.0f;
+
+    float N = 512;
+    float halfN = N / 2.0f;
+
+    float n = id.x - N / 2.0f;
+    float m = id.y - N / 2.0f;
+
+    float2 K = float2(n, m) * 2.0f * PI / LengthScale;
+    float w_0 = 2.0f * PI / 200.0f;
+    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0 * _FrameTime;
+
+    _ProgSpectrumTex[id.xy] = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
 }
