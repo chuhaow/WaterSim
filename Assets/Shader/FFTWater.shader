@@ -143,14 +143,14 @@ SubShader
             }
 
             //Fresnel from https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-14-advanced-techniques-realistic-real-time-skin
-            float4 BlinnPhone(float3 p) {
+            float4 BlinnPhone(float3 p, float2 uv) {
                 float3 lightDir = _WorldSpaceLightPos0;
                 float3 E = normalize(_WorldSpaceCameraPos - p);
                 float3 H = normalize(lightDir + E);
                 float3 N = 0.0f;
 
-                N = FBMNormal(p);
-                N = normalize(UnityObjectToWorldNormal(normalize(float3(-N.x, 1.0f, -N.y))));
+                //N = FBMNormal(p);
+                N = normalize(tex2D(_NormalTex, uv).rgb);
                 float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
@@ -175,8 +175,8 @@ SubShader
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                //o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 0.99f, 0).r, 0.0f));
-                o.vertex  = UnityObjectToClipPos(v.vertex);
+                //o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 0.05f, 0).r, 0.0f));
+                o.vertex =  UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 return o;
             }
@@ -188,8 +188,8 @@ SubShader
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 //return float4(i.uv,0.0f,1.0f);
-                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * 0.85f);
-                return float4(i.worldPos,1.0f);
+                return tex2D(_NormalTex, i.uv);
+                return BlinnPhone(i.worldPos, i.uv);
             }
             ENDCG
         }

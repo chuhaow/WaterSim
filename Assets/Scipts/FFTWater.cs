@@ -57,6 +57,8 @@ public class FFTWater : MonoBehaviour
     [SerializeField] private int lengthX = 10;
     [SerializeField] private int lengthZ = 10;
     [SerializeField] private int quadRes = 10;
+    [SerializeField] private int fftSize = 256;
+    [SerializeField] private int length = 512;
     [SerializeField] private Wave[] waves;
     [SerializeField] private Shader waterShader;
     [SerializeField] private ComputeShader cs;
@@ -94,27 +96,29 @@ public class FFTWater : MonoBehaviour
 
     private void CreateTextures()
     {
-        heightTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        heightTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
         heightTex.enableRandomWrite = true;
         heightTex.Create();
 
-        normTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        normTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         normTex.enableRandomWrite = true;
         normTex.Create();
 
-        spectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        spectrumTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         spectrumTex.enableRandomWrite = true;
         spectrumTex.Create();
 
-        progSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
+        progSpectrumTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
         progSpectrumTex.enableRandomWrite = true;
         progSpectrumTex.Create();
 
+        cs.SetInt("_FftSize", fftSize);
+        cs.SetInt("_LengthScale", length);
 
         cs.SetTexture(0, "_HeightTex", heightTex);
         cs.SetTexture(0, "_NormalTex", normTex);
         cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
-        cs.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        cs.Dispatch(0, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
     }
 
@@ -179,18 +183,33 @@ public class FFTWater : MonoBehaviour
     private void Update()
     {
 
-        cs.SetTexture(0, "_HeightTex", heightTex);
-        cs.SetTexture(0, "_NormalTex", normTex);
+        
+        
         cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
         cs.SetFloat("_FrameTime", Time.time);
+
+        cs.SetInt("_FftSize", fftSize);
+        cs.SetInt("_LengthScale", length);
 
         cs.SetTexture(1, "_InitSpectrumTex", spectrumTex);
         cs.SetTexture(1, "_ProgSpectrumTex", progSpectrumTex);
 
-        cs.Dispatch(1, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        cs.Dispatch(1, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
+
+        cs.SetTexture(2, "_HeightTex", heightTex);
+        cs.SetTexture(2, "_ProgSpectrumTex", progSpectrumTex);
+        cs.Dispatch(2, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
+
+        cs.SetTexture(3, "_NormalTex", normTex);
+        cs.SetTexture(3, "_HeightTex", heightTex);
+        cs.Dispatch(3, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
+
+
         waterMat.SetTexture("_HeightTex", heightTex);
         waterMat.SetTexture("_NormalTex", normTex);
         waterMat.SetTexture("_SpectrumTex", progSpectrumTex);
+
+
 
         //for(int i = 0; i < vertices.Length; i++)
         //{
