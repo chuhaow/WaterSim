@@ -183,8 +183,13 @@ public class FFTWater : MonoBehaviour
     private void Update()
     {
 
-        
-        
+        waterMat.SetColor("_Ambient", Ambient);
+        waterMat.SetColor("_Diffuse", Diffuse);
+        waterMat.SetColor("_Specular", Specular);
+        waterMat.SetFloat("F0", Reflectance);
+        waterMat.SetFloat("_BaseLacunarity", Lacunarity);
+        waterMat.SetFloat("_BaseGain", Gain);
+
         cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
         cs.SetFloat("_FrameTime", Time.time);
 

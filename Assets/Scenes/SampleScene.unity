@@ -104,7 +104,7 @@ NavMeshSettings:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_BuildSettings:
-    serializedVersion: 2
+    serializedVersion: 3
     agentTypeID: 0
     agentRadius: 0.5
     agentHeight: 2
@@ -117,7 +117,7 @@ NavMeshSettings:
     cellSize: 0.16666667
     manualTileSize: 0
     tileSize: 256
-    accuratePlacement: 0
+    buildHeightMesh: 0
     maxJobWorkers: 0
     preserveTilesOutsideBounds: 0
     debug:
@@ -257,9 +257,17 @@ Camera:
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
   m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
-  m_FocalLength: 50
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
@@ -294,7 +302,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 129, y: 1, z: -10}
+  m_LocalPosition: {x: 45.8, y: 1, z: -85.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -463,13 +471,15 @@ MonoBehaviour:
   lengthX: 10
   lengthZ: 10
   quadRes: 10
+  fftSize: 256
+  length: 512
   waves: []
   waterShader: {fileID: 4800000, guid: b9b4cda229e0c7c4fbdb8ed475192706, type: 3}
   cs: {fileID: 7200000, guid: ab9944631b6db1044a5cdcb44e4a4534, type: 3}
-  Ambient: {r: 0, g: 0, b: 0, a: 0}
-  Diffuse: {r: 0, g: 0, b: 0, a: 0}
-  Specular: {r: 0, g: 0, b: 0, a: 0}
-  Reflectance: 0
+  Ambient: {r: 0.21960784, g: 0.3647059, b: 0.3882353, a: 0}
+  Diffuse: {r: 0.16470589, g: 0.4862745, b: 0.65882355, a: 0}
+  Specular: {r: 0.9622642, g: 0.9622642, b: 0.9622642, a: 0}
+  Reflectance: 2.47
   Lacunarity: 0
   Gain: 0
   WaveFBM:

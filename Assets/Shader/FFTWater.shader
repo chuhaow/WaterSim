@@ -175,8 +175,8 @@ SubShader
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                //o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 0.05f, 0).r, 0.0f));
-                o.vertex =  UnityObjectToClipPos(v.vertex);
+                o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv , 0).r, 0.0f));
+                //o.vertex =  UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 return o;
             }
@@ -188,7 +188,7 @@ SubShader
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 //return float4(i.uv,0.0f,1.0f);
-                return tex2D(_NormalTex, i.uv);
+                //return tex2D(_NormalTex, i.uv);
                 return BlinnPhone(i.worldPos, i.uv);
             }
             ENDCG
