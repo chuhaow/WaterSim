@@ -3,9 +3,13 @@
 #pragma kernel CS_UpdateSpectrum
 #pragma kernel CS_DFT
 #pragma kernel GenerateNormalMap
+#pragma kernel CS_FFT
+#pragma kernel Assemble;
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 #define PI 3.14159265358979323846
+#define SIZE 512
+#define LOG_SIZE 9
 
 float2 ComplexMult(float2 a, float2 b) {
     return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -13,6 +17,10 @@ float2 ComplexMult(float2 a, float2 b) {
 
 float2 EulerFormula(float x) {
     return float2(cos(x), sin(x));
+}
+
+float2 ComplexExp(float2 a) {
+    return float2(cos(a.y), sin(a.y) * exp(a.x));
 }
 
 //Robert Jenkins' 32 bit integer hash function (Todo: Correct this)
@@ -63,10 +71,13 @@ float2 SamplePhillipsSpec(float2 k, float2 rand )
     return 1.0f/sqrt(2.0f) * (rand) * sqrt(PhillipsSpectrum(k));
 }
 
-RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex;
+RWTexture2D<float4> _FourierTarget;
+RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex, _DisplacementTex;
 RWTexture2D<float2> _ProgSpectrumTex;
 float _FrameTime;
-int _FftSize, _LengthScale;
+int _FftSize, _LengthScale, _FftLogSize;
+groupshared float4 groupBuffer[2][SIZE];
+bool _Inverse, _Direction;
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -86,9 +97,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     float2 gauss1 = BoxMullerTransform( JenkenHash(seed), JenkenHash(seed * seed));
     float2 gauss2 = BoxMullerTransform( JenkenHash(seed * seed * 0.25), JenkenHash(seed * seed * 2));
-
-    float w_0 = 2.0f * PI / 200.0f;
-    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0;
 
     float2 h0 = SamplePhillipsSpec(K, float2(gauss1.x, gauss2.y));
     float2 h0conj = SamplePhillipsSpec(-K, float2(gauss1.y, gauss2.x));
@@ -119,6 +127,7 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float m = id.y - _FftSize / 2.0f;
 
     float2 K = float2(n, m) * 2.0f * PI / _LengthScale;
+    float kLen = length(K);
 
     float2 gauss1 = BoxMullerTransform( JenkenHash(seed), JenkenHash(seed * seed));
     float2 gauss2 = BoxMullerTransform( JenkenHash(seed * seed * 0.25), JenkenHash(seed * seed * 2));
@@ -128,11 +137,46 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 
     float2 h0 = SamplePhillipsSpec(K, float2(gauss1.x, gauss2.y));
     float2 h0conj = SamplePhillipsSpec(-K, float2(gauss1.y, gauss2.x));
+    
+    float2 htilde = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
 
+    float2 displacementX = ComplexMult(htilde, float2(0, -K.x / kLen));
+    float2 displacementZ = ComplexMult(htilde, float2(0, -K.y / kLen));
 
-    _ProgSpectrumTex[id.xy] = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
+    if (kLen < 0.00001f) {
+        displacementX = 0;
+        displacementZ = 0;
+    }
+
+    _ProgSpectrumTex[id.xy] = htilde;
+    _DisplacementTex[id.xy] = float4(displacementX, displacementZ);
 
 }
+
+float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
+    uint b = _FftSize >> (id.x + 1);
+    float2 mult = 2 * PI * float2(0.0f, 1.0f) / _FftSize;
+    uint i = (2 * b * (id.y / b) + id.y % b) % _FftSize;
+    float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
+
+    return float4(twiddle, i, i + b);
+}
+
+
+
+//https://github.com/gasgiant/Ocean-URP
+void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddle)
+{
+    const float twoPi = 6.28318530718;
+    uint b = SIZE >> (step + 1);
+    uint w = b * (index / b);
+    uint i = (w + index) % SIZE;
+    sincos(-twoPi / SIZE * w, twiddle.y, twiddle.x);
+    if (_Inverse)
+        twiddle.y = -twiddle.y;
+    indices = uint2(i, i + b);
+}
+
 
 //https://www.keithlantz.net/2011/11/ocean-simulation-part-two-using-the-fast-fourier-transform/
 [numthreads(8, 8, 1)]
@@ -161,6 +205,34 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
     _HeightTex[id.xy] = h.x;
 }
 
+[numthreads(SIZE, 1, 1)]
+void CS_FFT(uint3 id : SV_DISPATCHTHREADID){
+    uint threadindex = id.x;
+    uint2 targetIndex = _Direction ? id.yx : id.xy;;
+
+    float4 input = _FourierTarget[targetIndex];
+
+    groupBuffer[0][threadindex] = input;
+    GroupMemoryBarrierWithGroupSync();
+    bool flag = false;
+
+    [unroll]
+    for (uint step = 0; step < LOG_SIZE; ++step) {
+        uint2 inputsIndices;
+        float2 twiddle;
+        ButterflyValues(step, threadindex, inputsIndices, twiddle);
+
+        float4 v = groupBuffer[flag][inputsIndices.y];
+        groupBuffer[!flag][threadindex] = groupBuffer[flag][inputsIndices.x] + float4(ComplexMult(twiddle, v.xy), ComplexMult(twiddle, v.zw));
+
+        flag = !flag;
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+
+    _FourierTarget[targetIndex] = groupBuffer[flag][threadindex];
+}
+
 SamplerState PointSampler;
 [numthreads(8, 8, 1)]
 void GenerateNormalMap(uint3 id : SV_DispatchThreadID) {
@@ -184,5 +256,25 @@ void GenerateNormalMap(uint3 id : SV_DispatchThreadID) {
     _NormalTex[texel] = float4(normal, 1.0f);
 
 
+}
+
+float4 Permute(float4 data, float2 id) {
+    return data * (1.0f - 2.0f * ((id.x + id.y) % 2));
+}
+
+[numthreads(8, 8, 1)]
+void Assemble(uint3 id: SV_DISPATCHTHREADID) {
+    float4 htildeDisplacement = Permute(_DisplacementTex[id.xy], id);
+
+    float2 dxdz = htildeDisplacement.rg;
+    float2 dydxz = htildeDisplacement.ba;
+
+
+
+    float3 displacement = float3(-1 * dxdz.x, dydxz.x, -1 * dxdz.y);
+
+
+
+    _HeightTex[id.xy] = float4(displacement, 0.0f);
 }
 

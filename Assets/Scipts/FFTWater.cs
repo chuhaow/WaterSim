@@ -78,7 +78,7 @@ public class FFTWater : MonoBehaviour
 
     private Material waterMat;
 
-    private RenderTexture heightTex, normTex, spectrumTex, progSpectrumTex;
+    private RenderTexture heightTex, normTex, spectrumTex, progSpectrumTex, displacementTex;
 
     [Header("FBM Param")]
     [SerializeField] private FBMParam WaveFBM;
@@ -111,6 +111,10 @@ public class FFTWater : MonoBehaviour
         progSpectrumTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
         progSpectrumTex.enableRandomWrite = true;
         progSpectrumTex.Create();
+
+        displacementTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        displacementTex.enableRandomWrite = true;
+        displacementTex.Create();
 
         cs.SetInt("_FftSize", fftSize);
         cs.SetInt("_LengthScale", length);
@@ -179,10 +183,28 @@ public class FFTWater : MonoBehaviour
         mesh.triangles = triangles;
     }
 
+    private void DoInverseFFT(RenderTexture rt)
+    {
+        cs.SetBool("_Inverse", true);
+
+        cs.SetTexture(4, "_FourierTarget", rt);
+        cs.SetBool("_Direction", false);
+        cs.Dispatch(4, 1, fftSize, 1);
+
+        cs.SetBool("_Direction", true);
+        cs.Dispatch(4, 1, fftSize, 1);
+    }
+
+    private void SetUniforms()
+    {
+        cs.SetInt("_FftSize", fftSize);
+        cs.SetInt("_LengthScale", length);
+        cs.SetFloat("_FrameTime", Time.time);
+    }
 
     private void Update()
     {
-
+        //Lighting
         waterMat.SetColor("_Ambient", Ambient);
         waterMat.SetColor("_Diffuse", Diffuse);
         waterMat.SetColor("_Specular", Specular);
@@ -190,28 +212,37 @@ public class FFTWater : MonoBehaviour
         waterMat.SetFloat("_BaseLacunarity", Lacunarity);
         waterMat.SetFloat("_BaseGain", Gain);
 
+
+        SetUniforms();
+
+        //Init spectrum
         cs.SetTexture(0, "_InitSpectrumTex", spectrumTex);
-        cs.SetFloat("_FrameTime", Time.time);
+        cs.Dispatch(0, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
-        cs.SetInt("_FftSize", fftSize);
-        cs.SetInt("_LengthScale", length);
-
+        // Progress Spectrum
         cs.SetTexture(1, "_InitSpectrumTex", spectrumTex);
+        //cs.SetTexture(1, "_ProgSpectrumTex", heightTex);
+        cs.SetTexture(1, "_DisplacementTex", displacementTex);
         cs.SetTexture(1, "_ProgSpectrumTex", progSpectrumTex);
-
         cs.Dispatch(1, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
-        cs.SetTexture(2, "_HeightTex", heightTex);
-        cs.SetTexture(2, "_ProgSpectrumTex", progSpectrumTex);
-        cs.Dispatch(2, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
+        // Generate Height map
+        DoInverseFFT(displacementTex);
 
+        //Assemble
+        cs.SetTexture(5, "_HeightTex", heightTex);
+        cs.SetTexture(5, "_DisplacementTex", displacementTex);
+        cs.Dispatch(5, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
+
+        //Generate normal map
         cs.SetTexture(3, "_NormalTex", normTex);
         cs.SetTexture(3, "_HeightTex", heightTex);
         cs.Dispatch(3, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
 
+        // Pass to water shader
         waterMat.SetTexture("_HeightTex", heightTex);
-        waterMat.SetTexture("_NormalTex", normTex);
+        waterMat.SetTexture("_NormalTex", displacementTex);
         waterMat.SetTexture("_SpectrumTex", progSpectrumTex);
 
 

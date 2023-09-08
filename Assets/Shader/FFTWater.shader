@@ -171,6 +171,7 @@ SubShader
 
             v2f vert (appdata v)
             {
+
                 v2f o;
 
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
@@ -187,8 +188,9 @@ SubShader
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
+                return float4(0,0,0,1);
                 //return float4(i.uv,0.0f,1.0f);
-                //return tex2D(_NormalTex, i.uv);
+                //return _HeightTex[i.uv];
                 return BlinnPhone(i.worldPos, i.uv);
             }
             ENDCG
