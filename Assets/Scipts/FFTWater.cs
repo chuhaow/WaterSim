@@ -96,15 +96,15 @@ public class FFTWater : MonoBehaviour
 
     private void CreateTextures()
     {
-        heightTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        heightTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         heightTex.enableRandomWrite = true;
         heightTex.Create();
 
-        normTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        normTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         normTex.enableRandomWrite = true;
         normTex.Create();
 
-        spectrumTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        spectrumTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         spectrumTex.enableRandomWrite = true;
         spectrumTex.Create();
 
@@ -235,14 +235,15 @@ public class FFTWater : MonoBehaviour
         cs.Dispatch(5, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
         //Generate normal map
-        cs.SetTexture(3, "_NormalTex", normTex);
+        
         cs.SetTexture(3, "_HeightTex", heightTex);
+        cs.SetTexture(3, "_NormalTex", normTex);
         cs.Dispatch(3, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
 
         // Pass to water shader
         waterMat.SetTexture("_HeightTex", heightTex);
-        waterMat.SetTexture("_NormalTex", displacementTex);
+        waterMat.SetTexture("_NormalTex", normTex);
         waterMat.SetTexture("_SpectrumTex", progSpectrumTex);
 
 

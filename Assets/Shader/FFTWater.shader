@@ -62,7 +62,7 @@ SubShader
             SamplerState linear_repeat_sampler;
             SamplerState point_repeat_sampler;
             Texture2D _HeightTex, _SpectrumTex;
-            sampler2D _NormalTex;
+            Texture2D _NormalTex;
 
             float Sine(float3 vert, Wave w) {
                 float time = _Time.y * w.phase;
@@ -150,7 +150,7 @@ SubShader
                 float3 N = 0.0f;
 
                 //N = FBMNormal(p);
-                N = normalize(tex2D(_NormalTex, uv).rgb);
+                N = normalize(_NormalTex.Sample(linear_repeat_sampler, uv).rgb);
                 float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
@@ -188,9 +188,9 @@ SubShader
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
-                return float4(0,0,0,1);
+                //return float4(0,0,0,1);
                 //return float4(i.uv,0.0f,1.0f);
-                //return _HeightTex[i.uv];
+                //return normalize(_NormalTex.SampleLevel(linear_repeat_sampler, i.uv, 0));
                 return BlinnPhone(i.worldPos, i.uv);
             }
             ENDCG

@@ -47,14 +47,14 @@ float PhillipsSpectrum(float2 k){
     float k_len4 = k_len2 * k_len2;
 
 
-    float2 wind = (float2(-30.5f, 1.0f));
+    float2 wind = (float2(-50.5f, 1.0f));
 
     float kdotWind   = dot(normalize(k), normalize(wind));
 	float k_dot_w2  = kdotWind * kdotWind * kdotWind * kdotWind * kdotWind * kdotWind;
    
     float windLen = length(wind);
 
-    float Amp = 0.000000075f;
+    float Amp = 0.00000015f;
     float L = (windLen * windLen) / 9.8f;
     float L2 = L * L;
 

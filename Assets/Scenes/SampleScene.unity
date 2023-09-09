@@ -471,7 +471,7 @@ MonoBehaviour:
   lengthX: 10
   lengthZ: 10
   quadRes: 10
-  fftSize: 256
+  fftSize: 512
   length: 512
   waves: []
   waterShader: {fileID: 4800000, guid: b9b4cda229e0c7c4fbdb8ed475192706, type: 3}
