@@ -57,89 +57,44 @@ SubShader
             float _WaveAmp, _WaveFreq, _WaveSpeed, _WaveSeed, _WaveSharpness, _WaveAmpMult, _WaveFreqMult, _WaveSharpnessMult, _WaveSpeedMult, _WaveSeedIncrement, _WaveCount;
             float _NormAmp, _NormFreq, _NormSpeed, _NormSeed, _NormSharpness, _NormAmpMult, _NormFreqMult, _NormSharpnessMult, _NormSpeedMult, _NormSeedIncrement, _NormFBMCount;
 
-            float4 _Ambient, _Diffuse, _Specular;
+            float4 _Ambient, _Diffuse, _Specular, _ScatterColour, _SunColour;
+            float _BubbleDensity;
             
             SamplerState linear_repeat_sampler;
             SamplerState point_repeat_sampler;
+            SamplerState trilinear_repeat_sampler;
             Texture2D _HeightTex, _SpectrumTex;
             Texture2D _NormalTex;
 
-            float Sine(float3 vert, Wave w) {
-                float time = _Time.y * w.phase;
-                float2 d = w.direction;
-                float xz = d.x * vert.x + d.y * vert.z;
-                return w.amplitude * sin(w.frequency * xz + time);
-            }
-            //https://catlikecoding.com/unity/tutorials/flow/waves/
 
-            float3 FBM(float3 vert) {
-                float freq = _WaveFreq;
-                float amp = _WaveAmp;
-                float speed = _WaveSpeed;
-                float rnd = _WaveSeed;
-                float ampSum = 0.0f;
-                float sharpness = _WaveSharpness;
-                float3 h = 0.0f;
-                for (int i = 0; i < _WaveCount; i++) {
-                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
-                    float xz = dir.x * vert.x + dir.y * vert.z;
-                    float3 wave = float3(0.0f, 0.0f, 0.0f);
-                    wave.x = dir.x * sharpness * amp * cos(freq * xz + _Time.y * speed);
-                    wave.z = dir.y * sharpness * amp * cos(freq * xz + _Time.y * speed);
-                    wave.y = amp * sin(freq * xz + _Time.y * speed);
-                    //float wave = amp * sin(freq * xz + _Time.y * speed);
-                    ampSum += amp;
-                    h += wave;
-                    freq *= _WaveFreqMult;
-                    amp *= _WaveAmpMult;
-                    sharpness *= _WaveSharpnessMult;
-                    speed *= _WaveSpeedMult;
-                    rnd += _WaveSeedIncrement;
-                }
+            float SmithMaskingBeckmann(float3 H, float3 S, float roughness) {
+				float hdots = max(0.001f, DotClamped(H, S));
+				float a = hdots / (roughness * sqrt(1 - hdots * hdots));
+				float a2 = a * a;
 
-                return h/ampSum;
-            }
+				return a < 1.6f ? (1.0f - 1.259f * a + 0.396f * a2) / (3.535f * a + 2.181 * a2) : 0.0f;
+			}
 
-            float3 FBMNormal(float3 vert) {
-                float freq = _NormFreq;
-                float amp = _NormAmp;
-                float speed = _NormSpeed;
-                float rnd = _NormSeed;
-                float ampSum = 0.0f;
-                float sharpness = _NormSharpness;
-                float3 n = 0.0f;
-                for (int i = 0; i < _NormFBMCount; i++) {
-                    float2 dir = normalize(float2(cos(rnd), sin(rnd)));
-                    float xz = dir.x * vert.x + dir.y * vert.z;
-                    float3 norm = float3(0.0f, 0.0f, 0.0f);
+            
+            float3 CalculateScatter(float3 lightDir, float3 viewDir ,float3 normal, float2 uv){
+                float a = 0.2f ;//+ saturate(_HeightTex.SampleLevel(linear_repeat_sampler, uv, 0).y);
+                float lightMask = SmithMaskingBeckmann(normal, lightDir, a);
 
-                    float wa = freq * amp;
-                    float s = sin(freq * xz + _Time.y * speed);
-                    float c = cos(freq * xz + _Time.y * speed);
 
-                    norm.x = dir.x * wa * c;
-                    norm.z = dir.y * wa * c;
-                    norm.y = sharpness * wa * s;
+                float Hi = max(0.0f, _HeightTex.Sample(trilinear_repeat_sampler, uv).y);
+				float3 scatterColor = _ScatterColour;
+				float3 bubbleColor = _Ambient;
+				float bubbleDensity = _BubbleDensity;
 
-                    ampSum += amp;
-                    n += norm;
-                    freq *= _NormFreqMult;
-                    amp *= _NormAmpMult;
-                    sharpness *= _NormSharpnessMult;
-                    speed *= _NormSpeedMult;
-                    rnd += _NormSeedIncrement;
-                }
+				
+				float k1 = 1.0f * Hi * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, normal), 3.0f);
+				float k2 = 1.0f * pow(DotClamped(viewDir, normal), 2.0f);
+				float k3 = 1.0f * DotClamped(normal, lightDir);;
+				float k4 = 1.0f * bubbleDensity;
 
-                return n / ampSum;
-            }
-
-            float3 Normal(float3 vert, Wave w) {
-                float2 d = w.direction;
-                float xz = d.x * vert.x + d.y * vert.z;
-                float time = _Time.y * w.phase;
-                float2 n = w.frequency * w.amplitude * d * cos(xz * w.frequency + time);
-
-                return float3(n, 0.0f);
+				float3 scatter = (k1 + k2) * scatterColor * _SunColour * rcp(1 + lightMask);
+				scatter += k3 * scatterColor * _SunColour + k4 * bubbleColor * _SunColour;
+                return scatter;
             }
 
             //Fresnel from https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-14-advanced-techniques-realistic-real-time-skin
@@ -147,25 +102,26 @@ SubShader
                 float3 lightDir = _WorldSpaceLightPos0;
                 float3 E = normalize(_WorldSpaceCameraPos - p);
                 float3 H = normalize(lightDir + E);
-                float3 N = 0.0f;
+               
+
 
                 //N = FBMNormal(p);
-                N = normalize(_NormalTex.Sample(linear_repeat_sampler, uv).rgb);
+                float3 N  = normalize(_NormalTex.Sample(linear_repeat_sampler, uv * 8).rgb);
                 float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
 
                 float base = 1 - dot(E, N);
-                float exponential = pow(base, 25.0);
+                float exponential = pow(base, 25.0f);
                 float fresnel = exponential + F0 * (1.0 - exponential);
 
                 float Ks = pow(DotClamped(N, H), 100.0);
-                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f) * _Specular * fresnel;
+                float4 spec = Ks * float4(_LightColor0.rgb, 1.0f) * _SunColour;
 
                 float4 ambient = _Ambient;
 
-             
+                float3 scatter = CalculateScatter(lightDir, E, N, uv * 8);
 
-                float4 color = saturate(ambient + diffuse + spec);
+                float4 color = saturate(float4( (1- fresnel) * scatter + spec+ fresnel, 1.0f));
                 return color;
             }
 
@@ -173,12 +129,14 @@ SubShader
             {
 
                 v2f o;
-
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                float3 displacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * 8 , 0).xyz;
                 o.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                o.vertex = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv , 0).r, 0.0f));
-                //o.vertex =  UnityObjectToClipPos(v.vertex);
+                v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
+                o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
+
+
                 return o;
             }
 
@@ -190,7 +148,7 @@ SubShader
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 //return float4(0,0,0,1);
                 //return float4(i.uv,0.0f,1.0f);
-                //return normalize(_NormalTex.SampleLevel(linear_repeat_sampler, i.uv, 0));
+                //return normalize(_NormalTex.SampleLevel(linear_repeat_sampler, i.uv * 8, 0));
                 return BlinnPhone(i.worldPos, i.uv);
             }
             ENDCG

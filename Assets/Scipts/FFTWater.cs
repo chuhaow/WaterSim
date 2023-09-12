@@ -54,8 +54,8 @@ public class FFTWater : MonoBehaviour
 
 
 
-    [SerializeField] private int lengthX = 10;
-    [SerializeField] private int lengthZ = 10;
+    [SerializeField] private int lengthX = 100;
+    [SerializeField] private int lengthZ = 100;
     [SerializeField] private int quadRes = 10;
     [SerializeField] private int fftSize = 256;
     [SerializeField] private int length = 512;
@@ -67,10 +67,19 @@ public class FFTWater : MonoBehaviour
     [SerializeField] private Color Diffuse;
     [SerializeField] private Color Specular;
     [SerializeField] private float Reflectance;
+    [Header("Scatter")]
+    [SerializeField] private Color sunColour;
+    [SerializeField] private Color scatterColor;
+    [SerializeField] private float bubbleDensity;
 
     [SerializeField] private float Lacunarity;
     [Range(0.0f, 1.0f)]
     [SerializeField] private float Gain;
+
+    [Header("Spectrum")]
+    [SerializeField] private float amp;
+    [SerializeField] private float damping;
+    [SerializeField] private Vector2 wind;
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
@@ -151,9 +160,10 @@ public class FFTWater : MonoBehaviour
         mesh = new Mesh();
         GetComponent<MeshFilter>().mesh = mesh;
         mesh.name = "procedural Plane";
+        mesh.indexFormat = IndexFormat.UInt32;
 
         int sideVertCountX = lengthX * quadRes;
-        int sideVertCountZ = lengthZ * quadRes;
+        int sideVertCountZ = sideVertCountX;
 
         vertices = new Vector3[(sideVertCountX + 1) * (sideVertCountZ + 1)];
         Vector2[] uv = new Vector2[vertices.Length];
@@ -165,6 +175,7 @@ public class FFTWater : MonoBehaviour
                 uv[i] = new Vector2((float)x / sideVertCountX, (float)z / sideVertCountZ);
                 i++;
             }
+            
         }
         mesh.vertices = vertices;
         mesh.uv = uv;
@@ -200,17 +211,30 @@ public class FFTWater : MonoBehaviour
         cs.SetInt("_FftSize", fftSize);
         cs.SetInt("_LengthScale", length);
         cs.SetFloat("_FrameTime", Time.time);
+        cs.SetFloat("_Amp", amp / 100000000.0f);
+        cs.SetFloat("_Damping", damping / 1000.0f);
+        cs.SetVector("_Wind", wind);
     }
 
-    private void Update()
+    private void SetLightingParam()
     {
-        //Lighting
         waterMat.SetColor("_Ambient", Ambient);
         waterMat.SetColor("_Diffuse", Diffuse);
         waterMat.SetColor("_Specular", Specular);
         waterMat.SetFloat("F0", Reflectance);
         waterMat.SetFloat("_BaseLacunarity", Lacunarity);
         waterMat.SetFloat("_BaseGain", Gain);
+
+        waterMat.SetColor("_SunColour", sunColour);
+        waterMat.SetColor("_ScatterColour", scatterColor);
+        waterMat.SetFloat("_BubbleDensity", bubbleDensity);
+    }
+
+    private void Update()
+    {
+        //Lighting
+        SetLightingParam();
+
 
 
         SetUniforms();

@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.18352441, g: 0.2276042, b: 0.29712301, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -209,7 +209,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 705507993}
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.20271079, y: 0.26706895, z: -0.057571597, w: 0.94035524}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -468,8 +468,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c633c71a185df1438b5095a6372b3b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lengthX: 10
-  lengthZ: 10
+  lengthX: 100
+  lengthZ: 100
   quadRes: 10
   fftSize: 512
   length: 512
@@ -479,9 +479,15 @@ MonoBehaviour:
   Ambient: {r: 0.21960784, g: 0.3647059, b: 0.3882353, a: 0}
   Diffuse: {r: 0.16470589, g: 0.4862745, b: 0.65882355, a: 0}
   Specular: {r: 0.9622642, g: 0.9622642, b: 0.9622642, a: 0}
-  Reflectance: 2.47
+  Reflectance: 0.02
+  sunColour: {r: 1, g: 1, b: 1, a: 0}
+  scatterColor: {r: 0.16470589, g: 0.4862745, b: 0.65882355, a: 0}
+  bubbleDensity: 0.5
   Lacunarity: 0
   Gain: 0
+  amp: 15
+  damping: 15
+  wind: {x: -50, y: 1}
   WaveFBM:
     amplitude: 0
     frequency: 0
