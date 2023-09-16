@@ -492,10 +492,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c633c71a185df1438b5095a6372b3b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  atmosphere: {fileID: 963194229}
   lengthX: 100
   lengthZ: 100
-  quadRes: 10
+  quadRes: 20
   fftSize: 512
   length: 512
   waves: []
@@ -513,9 +512,12 @@ MonoBehaviour:
   fresnelColour: {r: 0.24705882, g: 0.1764706, b: 0.09019608, a: 0}
   Lacunarity: 0
   Gain: 0
-  amp: 30
+  amp: 40
   damping: 1
   wind: {x: 57, y: 57}
+  foamAddAmount: 0.1
+  foamThreshold: 0
+  foamColour: {r: 1, g: 1, b: 1, a: 0}
   sunPosition: {x: 0, y: 0, z: 0}
   WaveFBM:
     amplitude: 0

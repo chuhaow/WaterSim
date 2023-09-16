@@ -61,12 +61,12 @@ SubShader
             float4 _Ambient, _Diffuse, _Specular, _ScatterColour, _SunColour, _FresnelColour;
             float _BubbleDensity, _ScatterHeightMod;
             float _FresnelShine;
-            float3 _SunDirection, _SunColor;
+            float3 _FoamColour;
 
             SamplerState linear_repeat_sampler;
             SamplerState point_repeat_sampler;
             SamplerState trilinear_repeat_sampler;
-            Texture2D _HeightTex, _SpectrumTex;
+            Texture2D _HeightTex, _SpectrumTex, _FoamTex;
             Texture2D _NormalTex;
 
             #define Tile 4
@@ -81,7 +81,9 @@ SubShader
 
             
             float3 CalculateScatter(float3 lightDir, float3 viewDir ,float3 normal, float3 halfway,float2 tiledUV){
-                float a = 0.2f ;//+ saturate(_HeightTex.SampleLevel(linear_repeat_sampler, uv, 0).y);
+                float foam = _FoamTex.Sample(linear_repeat_sampler, tiledUV);
+                
+                float a = 0.075 + foam;//+ saturate(_HeightTex.SampleLevel(linear_repeat_sampler, uv, 0).y);
                 float lightMask = SmithMaskingBeckmann(halfway, lightDir, a);
 
 
@@ -110,7 +112,7 @@ SubShader
 
 
                 //N = FBMNormal(p);
-                float2 slopes = _NormalTex.Sample(linear_repeat_sampler, uv * Tile).rg;
+                
                 float3 N  = normalize( _NormalTex.Sample(linear_repeat_sampler, uv * Tile).rgb);
                 float Kd = DotClamped(N, H);
                 float4 diffuse = Kd * float4(_LightColor0.rgb, 1.0f) * _Diffuse;
@@ -132,10 +134,14 @@ SubShader
 
                 float4 ambient = _Ambient;
 
+                float foam = _FoamTex.Sample(linear_repeat_sampler, uv * Tile);
+
                 float3 scatter = CalculateScatter(lightDir, E, N, H, uv * Tile);
 
-                float4 color = saturate(float4(  scatter + spec + fresnelColor, 1.0f));
-                return color;
+                float3 colour = scatter + spec + fresnelColor;
+                colour = (lerp(colour, _FoamColour, saturate(foam - 0.01f)));
+
+                return float4(colour, 1.0f);
             }
 
             v2f vert (appdata v)

@@ -83,6 +83,11 @@ public class FFTWater : MonoBehaviour
     [SerializeField] private float amp;
     [SerializeField] private float damping;
     [SerializeField] private Vector2 wind;
+
+    [Header("Foam")]
+    [SerializeField] private float foamAddAmount;
+    [SerializeField] private float foamThreshold;
+    [SerializeField] private Color foamColour;
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
@@ -90,7 +95,7 @@ public class FFTWater : MonoBehaviour
 
     private Material waterMat;
 
-    private RenderTexture heightTex, normTex, spectrumTex, progSpectrumTex, displacementTex, gradientTex;
+    private RenderTexture heightTex, normTex, spectrumTex, progSpectrumTex, displacementTex, gradientTex, foamTex;
 
     [Header("Sun")]
     [SerializeField] private Vector3 sunPosition;
@@ -134,6 +139,10 @@ public class FFTWater : MonoBehaviour
         gradientTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         gradientTex.enableRandomWrite = true;
         gradientTex.Create();
+
+        foamTex = new RenderTexture(fftSize, fftSize, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        foamTex.enableRandomWrite = true;
+        foamTex.Create();
 
         SetUniforms();
 
@@ -225,6 +234,8 @@ public class FFTWater : MonoBehaviour
         cs.SetFloat("_Amp", amp / 100000000.0f);
         cs.SetFloat("_Damping", damping / 10000.0f);
         cs.SetVector("_Wind", wind);
+        cs.SetFloat("_FoamThreshold", foamThreshold);
+        cs.SetFloat("_FoamAdd", foamAddAmount);
     }
 
     private void SetLightingParam()
@@ -243,6 +254,7 @@ public class FFTWater : MonoBehaviour
         waterMat.SetFloat("_ScatterHeightMod", scatterHeightMod);
         waterMat.SetFloat("_FresnelShine", fresnelShine);
         waterMat.SetColor("_FresnelColour", fresnelColour);
+        waterMat.SetColor("_FoamColour", foamColour);
     }
 
     private void Update()
@@ -262,18 +274,20 @@ public class FFTWater : MonoBehaviour
 
         // Progress Spectrum
         cs.SetTexture(1, "_InitSpectrumTex", spectrumTex);
-        //cs.SetTexture(1, "_ProgSpectrumTex", heightTex);
+        cs.SetTexture(1, "_GradientTex", gradientTex);
         cs.SetTexture(1, "_DisplacementTex", displacementTex);
         cs.SetTexture(1, "_ProgSpectrumTex", progSpectrumTex);
         cs.Dispatch(1, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
         // Generate Height map
         DoInverseFFT(displacementTex);
-
+        DoInverseFFT(gradientTex);
         //Assemble
         cs.SetTexture(5, "_ProgSpectrumTex", progSpectrumTex);
         cs.SetTexture(5, "_HeightTex", heightTex);
         cs.SetTexture(5, "_DisplacementTex", displacementTex);
+        cs.SetTexture(5, "_GradientTex", gradientTex);
+        cs.SetTexture(5, "_FoamTex", foamTex);
         cs.Dispatch(5, Mathf.CeilToInt(fftSize / 8.0f), Mathf.CeilToInt(fftSize / 8.0f), 1);
 
         //Generate normal map
@@ -287,6 +301,7 @@ public class FFTWater : MonoBehaviour
         waterMat.SetTexture("_HeightTex", heightTex);
         waterMat.SetTexture("_NormalTex", normTex);
         waterMat.SetTexture("_SpectrumTex", progSpectrumTex);
+        waterMat.SetTexture("_FoamTex", foamTex);
 
 
         //for(int i = 0; i < vertices.Length; i++)

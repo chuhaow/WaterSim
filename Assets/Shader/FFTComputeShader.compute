@@ -19,6 +19,7 @@ RWTexture2D<float4> _FourierTarget;
 RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex, _DisplacementTex, _GradientTex;
 RWTexture2D<float2> _ProgSpectrumTex;
 float _FrameTime;
+float _FoamThreshold, _FoamAdd;
 int _FftSize, _LengthScale, _FftLogSize, _SeedStep;
 groupshared float4 groupBuffer[2][SIZE];
 bool _Inverse, _Direction;
@@ -164,7 +165,7 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float2 DyxDyz = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
 	float2 DxxDzz = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
 
-    //_GradientTex[id.xy] = float4(DxxDzz , DyxDyz);
+    _GradientTex[id.xy] = float4(DxxDzz , DyxDyz);
     _ProgSpectrumTex[id.xy] = htilde;
     _DisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
 
@@ -332,15 +333,29 @@ float4 Permute(float4 data, float2 id) {
 [numthreads(8, 8, 1)]
 void Assemble(uint3 id: SV_DISPATCHTHREADID) {
     float4 htildeDisplacement = Permute(_DisplacementTex[id.xy], id);
+    float4 htildeGradient = Permute(_GradientTex[id.xy], id);
 
     float2 dxdz = htildeDisplacement.rg;
     float2 dydxz = htildeDisplacement.ba;
+    float2 dxxdzz = htildeGradient.xy;
+    float2 dyxdyz = htildeGradient.zw;
 
-
+    float jacobian = (1.0f + 1 * dxxdzz.x) * (1.0f + 1 * dxxdzz.y) - 1 * 1 * dydxz.y * dydxz.y;
 
     float3 displacement = float3(1 * dxdz.x, dydxz.x, 1 * dxdz.y);
 
+    float foam = _FoamTex[id.xy];
+    foam *= exp(-0.0175f);
+    foam = saturate(foam);
+
+    float biasedJacobian = max(0.0f, -(jacobian - 0.85f));
+
+    if(biasedJacobian > _FoamThreshold){
+        foam += _FoamAdd * biasedJacobian;
+    }
 
 
+
+    _FoamTex[id.xy] = foam;
     _HeightTex[id.xy] = float4(displacement, 0.0f);
 }
