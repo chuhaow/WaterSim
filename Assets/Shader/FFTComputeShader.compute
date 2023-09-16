@@ -4,19 +4,22 @@
 #pragma kernel CS_DFT
 #pragma kernel GenerateNormalMap
 #pragma kernel CS_FFT
-#pragma kernel Assemble;
+#pragma kernel Assemble
+#pragma kernel CS_HorizontalFFT
+#pragma kernel CS_VerticalFFT
+#pragma kernel CS_PackSpectrumConjugate
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 #define PI 3.14159265358979323846
 #define SIZE 512
 #define LOG_SIZE 9
 
-
+RWTexture2D<float> _FoamTex;
 RWTexture2D<float4> _FourierTarget;
-RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex, _DisplacementTex;
+RWTexture2D<float4> _HeightTex, _NormalTex, _InitSpectrumTex, _DisplacementTex, _GradientTex;
 RWTexture2D<float2> _ProgSpectrumTex;
 float _FrameTime;
-int _FftSize, _LengthScale, _FftLogSize;
+int _FftSize, _LengthScale, _FftLogSize, _SeedStep;
 groupshared float4 groupBuffer[2][SIZE];
 bool _Inverse, _Direction;
 float2 _Wind;
@@ -62,7 +65,7 @@ float PhillipsSpectrum(float2 k){
     float2 wind = _Wind;
 
     float kdotWind   = dot(normalize(k), normalize(wind));
-	float k_dot_w2  = kdotWind * kdotWind * kdotWind * kdotWind * kdotWind * kdotWind;
+	float k_dot_w2  = kdotWind * kdotWind ;
    
     float windLen = length(wind);
 
@@ -85,11 +88,8 @@ float2 SamplePhillipsSpec(float2 k, float2 rand )
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    float2 dir = float2(-1, 1);
-    dir = normalize(dir);
-
-    uint seed = id.x + _FftSize + id.y + _FftSize;
-
+    uint seed = id.x + _FftSize * id.y + _FftSize;
+    //seed += _SeedStep;
     
     float halfN = _FftSize / 2.0f;
 
@@ -108,8 +108,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 }
 
 [numthreads(8,8,1)]
+void CS_PackSpectrumConjugate(uint3 id : SV_DISPATCHTHREADID) {
+    float2 h0 = _InitSpectrumTex[id.xy];
+    float2 h0conj = _InitSpectrumTex[uint2((_FftSize - id.x ) % _FftSize, (_FftSize - id.y) % _FftSize)];
+
+    _InitSpectrumTex[id.xy] = float4(h0, h0conj.x, -h0conj.y);
+}
+
+[numthreads(8,8,1)]
 void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float4 initialSignal = _InitSpectrumTex[id.xy];
+    
+    float2 h0 = initialSignal.xy;
+    float2 h0conj = initialSignal.zw;
 
     uint seed = id.x + _FftSize * id.y + _FftSize;
 
@@ -127,14 +138,11 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
         kLenRcp = 1.0f;
     }
 
-    float2 gauss1 = BoxMullerTransform( JenkenHash(seed), JenkenHash(seed * seed));
-    float2 gauss2 = BoxMullerTransform( JenkenHash(seed * seed * 0.25), JenkenHash(seed * seed * 2));
+
 
     float w_0 = 2.0f * PI / 200.0f;
     float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0 * _FrameTime;
 
-    float2 h0 = SamplePhillipsSpec(K, float2(gauss1.x, gauss2.y));
-    float2 h0conj = SamplePhillipsSpec(-K, float2(gauss1.y, gauss2.x));
     
     float2 htilde = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
     float2 ih = float2(-htilde.y, htilde.x);
@@ -153,12 +161,10 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float2 htildeDisplacementX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
     float2 htildeDisplacementZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
     
+    float2 DyxDyz = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
+	float2 DxxDzz = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
 
-    if (kLen < 0.00001f) {
-        displacementX = 0;
-        displacementZ = 0;
-    }
-
+    //_GradientTex[id.xy] = float4(DxxDzz , DyxDyz);
     _ProgSpectrumTex[id.xy] = htilde;
     _DisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
 
@@ -173,8 +179,6 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
     return float4(twiddle, i, i + b);
 }
 
-
-
 //https://github.com/gasgiant/Ocean-URP
 void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddle)
 {
@@ -187,6 +191,42 @@ void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddl
         twiddle.y = -twiddle.y;
     indices = uint2(i, i + b);
 }
+
+
+float4 FFT(uint threadIndex, float4 input) {
+    groupBuffer[0][threadIndex] = input;
+    GroupMemoryBarrierWithGroupSync();
+    bool flag = false;
+
+    [unroll]
+    for (uint step = 0; step < LOG_SIZE; ++step) {
+        uint2 inputsIndices;
+        float2 twiddle;
+        ButterflyValues(step, threadIndex, inputsIndices, twiddle);
+
+        float4 v = groupBuffer[flag][inputsIndices.y];
+        groupBuffer[!flag][threadIndex] = groupBuffer[flag][inputsIndices.x] + float4(ComplexMult(twiddle, v.xy), ComplexMult(twiddle, v.zw));
+
+        flag = !flag;
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    return groupBuffer[flag][threadIndex];
+}
+
+[numthreads(SIZE, 1, 1)]
+void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
+
+        _FourierTarget[id.xy] = FFT(id.x, _FourierTarget[id.xy]);
+    
+}
+
+[numthreads(SIZE, 1, 1)]
+void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
+        _FourierTarget[id.yx] = FFT(id.x, _FourierTarget[id.yx]);
+}
+
+
 
 
 //https://www.keithlantz.net/2011/11/ocean-simulation-part-two-using-the-fast-fourier-transform/
@@ -267,21 +307,6 @@ void GenerateNormalMap(uint3 id : SV_DispatchThreadID) {
         nearHeight =  _HeightTex.Load( temp).r;
     }
 
-    //if (texel.x - 1 < 0  || texel.y - 1 < 0 ){
-    //    //float2 texCoords = texel;
-    //    //leftHeight = _HeightTex.Load( abs(texel - int2(1, 0)) ).r;
-    //    //rightHeight = _HeightTex.Load( (texel + int2(1, 0)) ).r;
-    //    //nearHeight = _HeightTex.Load( abs(texel - int2(0, 1)) ).r;
-    //    //farHeight = _HeightTex.Load( (texel + int2(0, 1)) ).r;
-    //    //_NormalTex[texel] = float4(leftHeight,0,0, 1.0f);
-    //}else{
-    //    //leftHeight = _HeightTex.Load( abs(texel - int2(1, 0)) ).r;//leftHeight = _HeightTex.Load( (texel - int2(1, 0)) ).r;
-    //    //rightHeight = _HeightTex.Load( (texel + int2(1, 0)) % int2(_FftSize, _FftSize)).r;
-    //    //nearHeight = _HeightTex.Load( abs(texel - int2(0, 1)) ).r;//nearHeight = _HeightTex.Load( (texel - int2(0, 1)) ).r;
-    //    //farHeight = _HeightTex.Load( (texel + int2(0, 1)) % int2(_FftSize, _FftSize) ).r;
-
-    
-    //}
         //leftHeight = _HeightTex.Load( texel - int2(1, 0)).r;//leftHeight = _HeightTex.Load( (texel - int2(1, 0)) ).r;
     rightHeight = _HeightTex.Load( (texel + int2(1, 0)) % int2(_FftSize, _FftSize)).r;
         //nearHeight = _HeightTex.Load( texel - int2(0, 1)).r;//nearHeight = _HeightTex.Load( (texel - int2(0, 1)) ).r;
@@ -313,10 +338,9 @@ void Assemble(uint3 id: SV_DISPATCHTHREADID) {
 
 
 
-    float3 displacement = float3(-1 * dxdz.x, dydxz.x, -1 * dxdz.y);
+    float3 displacement = float3(1 * dxdz.x, dydxz.x, 1 * dxdz.y);
 
 
 
     _HeightTex[id.xy] = float4(displacement, 0.0f);
 }
-
