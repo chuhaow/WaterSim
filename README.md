@@ -1,10 +1,10 @@
 # Water Simulation
 
-An expoloration of water simulation techniques used in graphical programming
+An exploration of water simulation techniques used in graphical programming
 
 ## Description
 
-Two techniques for water simulation were used in this project. The first is a simple Sum of Sines technique. With the Sum of Sines technique I was able to produce a highly stylisted simulation of water as well as a low fedility simulation. 
+Two techniques for water simulation were used in this project. The first is a simple Sum of Sines technique. With the Sum of Sines technique I was able to produce a highly stylisted simulation of water as well as a low fidelity  simulation using sum of sine and Fractional Brownian Motion. 
 
 ![Stylisted Water Gif](https://github.com/chuhaow/ProjectGifs/blob/main/WaterSim/StyleWater.gif)
 
