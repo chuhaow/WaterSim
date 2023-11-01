@@ -8,11 +8,13 @@ Two techniques for water simulation were used in this project. The first is a si
 
 ![Stylisted Water Gif](https://github.com/chuhaow/ProjectGifs/blob/main/WaterSim/StyleWater.gif)
 
+Please Note the artifacts in the gif above are due to the capturing software used and does not happen in the simulation
+
 The second technique explored was the FFT technique. With this technique I was able to achieve a highly realistic simulation of the ocean akin to the ocean in Sea of Thieves. Please see the following videos 
 
-[No Foam Water]({https://www.youtube.com/watch?v=XI_Q-eunL0o} "Link Title")
+[![No Foam Water](https://github.com/chuhaow/ProjectGifs/blob/main/WaterSim/waterNoFoam.png)](https://www.youtube.com/watch?v=XI_Q-eunL0o)
 
-[Foam Water]({https://www.youtube.com/watch?v=XI_Q-eunL0o} "Link Title")
+[![Foam Water](https://github.com/chuhaow/ProjectGifs/blob/main/WaterSim/waterWithFoam.png)](https://www.youtube.com/watch?v=za5s0TajG6Q)
 
 
 ## Acknowledgments
